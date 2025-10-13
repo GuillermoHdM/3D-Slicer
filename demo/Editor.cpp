@@ -1,4 +1,5 @@
 #include "Editor.h"
+#include "Shaders.h"
 #include <random>
 #include <iostream>
 Editor::Editor() : W(ivec2(1920 * 0.75f, 1080 * 0.75f), true)

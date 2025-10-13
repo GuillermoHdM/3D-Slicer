@@ -9,7 +9,7 @@ add_library(
     OpenGl.hpp
     OpenGl.cpp
     
-    Math.hpp            "MyImgui.cpp" "MyImgui.h"    )
+    Math.hpp            "MyImgui.cpp" "MyImgui.h"     "Shaders.h" "Grid.h" "Grid.cpp")
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 ## ImGui
