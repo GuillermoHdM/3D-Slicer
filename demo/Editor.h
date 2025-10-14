@@ -1,7 +1,7 @@
 #pragma once
 #include "Window.hpp"
 #include "MyImgui.h"
-
+#include "Grid.h"
 #include <vector>
 #include <utility>
 
@@ -16,15 +16,15 @@ class Editor
 	struct Renderer
 	{
 		void Init();
+		void Update();
 		GLuint MyShader;
 		GLuint VtxShader;
 		GLuint FragShader;
 		GLuint quadVAO;
 		GLuint quadVBO;
-		GLuint CreateProgram(GLenum stage)const;
 	};
 	Renderer MyRenderer;
-
+	Grid m_Grid;
 public:
 	Window W;
 	Editor();
