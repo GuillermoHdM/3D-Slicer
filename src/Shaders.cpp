@@ -48,7 +48,7 @@ const char* GridFragShader = R"(
 	uniform vec3 gridColor = vec3(0.92, 0.847, 0.031);
 	
 	void main() {
-	    float scale = 1.5;//tile size
+	    float scale = 3.0;//tile size
 	    float line = 0.2;//line thickness
 	
 	    //XZ coords

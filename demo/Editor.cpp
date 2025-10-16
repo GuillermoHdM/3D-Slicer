@@ -6,6 +6,8 @@
 Editor::Editor() : W(ivec2(1920 * 0.75f, 1080 * 0.75f), true)
 {
 	Window::initialize_system();
+    glfwSetWindowUserPointer(W.handle(), &m_Camera);
+    glfwSetScrollCallback(W.handle(), ScrollCallback);
 	MyImgui.Init(W.handle());
     MyRenderer.Init();
     m_Grid.Init();
@@ -34,28 +36,14 @@ bool Editor::Update()
 {
 	W.update();
 	Dt = MyImgui.Update();
+    m_Camera.Update(W.handle());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //tmp
-    glm::mat4 view = glm::lookAt(
-        glm::vec3(5.0f, 5.0f, 5.0f),  // camera position
-        glm::vec3(0.0f, 0.0f, 0.0f),  // looking at origin
-        glm::vec3(0.0f, 1.0f, 0.0f)   // up direction
-    );
-
-    glm::mat4 projection = glm::perspective(
-        glm::radians(45.0f),  // FOV
-        16.0f / 9.0f,         // aspect ratio (adjust if your window isn’t 16:9)
-        0.1f,                 // near plane
-        1000.0f               // far plane
-    );
-    //***
-    m_Grid.Draw(view, projection);
+    m_Grid.Draw(m_Camera.m_View, m_Camera.m_Projection);
     MyRenderer.Update();
 	UpdateImGui();//get the display of imgui updated
 
     ivec2 windowSize = W.size();
-
 
 	MyImgui.Draw();
 	return !W.should_exit();

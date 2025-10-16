@@ -2,6 +2,7 @@
 #include "Window.hpp"
 #include "MyImgui.h"
 #include "Grid.h"
+#include "Camera.h"
 #include <vector>
 #include <utility>
 
@@ -25,6 +26,7 @@ class Editor
 	};
 	Renderer MyRenderer;
 	Grid m_Grid;
+	Camera m_Camera;
 public:
 	Window W;
 	Editor();
