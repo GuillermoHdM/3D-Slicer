@@ -1,6 +1,7 @@
 #include "Editor.h"
 #include "Shaders.h"
 #include "OpenGl.hpp"
+#include "FileLoader.h"
 #include <random>
 #include <iostream>
 Editor::Editor() : W(ivec2(1920 * 0.75f, 1080 * 0.75f), true)
@@ -8,6 +9,7 @@ Editor::Editor() : W(ivec2(1920 * 0.75f, 1080 * 0.75f), true)
 	Window::initialize_system();
     glfwSetWindowUserPointer(W.handle(), &m_Camera);
     glfwSetScrollCallback(W.handle(), ScrollCallback);
+    glfwSetDropCallback(W.handle(), DropCallback);
 	MyImgui.Init(W.handle());
     MyRenderer.Init();
     m_Grid.Init();
