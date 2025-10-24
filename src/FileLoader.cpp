@@ -1,6 +1,10 @@
 #include <vector>
-#include "iostream"
+#include <sstream>
+#include <string>
+#include <iostream>
 #include "FileLoader.h"
+#include "Object.h"
+#include "../demo/Editor.h"
 
 bool IsBinary(const std::string& path)
 {
@@ -48,6 +52,11 @@ void DropCallback(GLFWwindow* window, int count, const char** paths)
 		std::cout << "  " << path << "\n";
 	}
 	//^^^^^^^^^^^^
+	Editor* editor = static_cast<Editor*>(glfwGetWindowUserPointer(window));//recover the editor pointer
+	if (!editor)
+	{
+		return;
+	}
 	for (int i = 0; i < count; ++i) 
 	{
 		std::string path = paths[i];
@@ -62,9 +71,10 @@ void DropCallback(GLFWwindow* window, int count, const char** paths)
 			}
 			else
 			{
-				//triangles = LoadAsciiSTL(path)
+				std::cout << "ASCII" << std::endl;
+				LoadAsciiSTL(path, triangles);
 			}
-			//CreateMeshFromTriangles(triangles);
+			editor->AddNewObject(triangles);
 		}
 		else 
 		{
@@ -91,11 +101,11 @@ void LoadBinarySTL(const std::string& path, std::vector<Triangle> &out_triangles
 
 	if (!file)
 	{
-		throw std::runtime_error("Invalid STL file: " + path);
+		throw std::runtime_error("Invalid STL Binary file: " + path);
 	}
 	if (numTriangles == 0)
 	{
-		throw std::runtime_error("Empty STL file: " + path);
+		throw std::runtime_error("Empty STL Binary file: " + path);
 	}
 
 	if (out_triangles.empty() == false)//not empty output?
@@ -116,6 +126,65 @@ void LoadBinarySTL(const std::string& path, std::vector<Triangle> &out_triangles
 	}
 	if (!file)
 	{
-		throw std::runtime_error("Something went wrong reading: " + path);
+		throw std::runtime_error("Something went wrong reading STL Binary: " + path);
+	}
+}
+
+
+void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles)
+{
+	std::ifstream file(path, std::ios::binary);
+	if (!file)
+	{
+		throw std::runtime_error("Cant open ASCII STL file: " + path);
+	}
+	std::string line;
+	Triangle tri;
+	int vertexCount = 0;
+
+	while (std::getline(file, line))//read each line
+	{
+		std::istringstream ss(line);
+		std::string word;
+		ss >> word;
+		if (word == "facet")
+		{
+			std::string normalWord;
+			ss >> normalWord >> tri.n.x >> tri.n.y >> tri.n.z;
+			vertexCount = 0;
+		}
+		else if (word == "vertex")
+		{
+			glm::vec3 v;
+			ss >> v.x >> v.y >> v.z;
+
+			if (vertexCount == 0)
+			{
+				tri.A = v;
+			}
+			else if (vertexCount == 1)
+			{
+				tri.B = v;
+			}
+			else if (vertexCount == 2)
+			{
+				tri.C = v;
+			}
+
+			vertexCount++;
+		}
+		else if (word == "endfacet")//end of the face
+		{
+			//if invalid normal:
+			if (glm::length(tri.n) < 0.0001f)
+			{
+				tri.n = glm::normalize(glm::cross(tri.B - tri.A, tri.C - tri.A));
+			}
+			out_triangles.push_back(tri);
+		}
+	}
+	if (out_triangles.empty())
+	{
+		throw std::runtime_error("No triangles in STL ASCII: " + path);
 	}
 }

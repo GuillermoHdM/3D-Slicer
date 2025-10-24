@@ -9,6 +9,7 @@ Editor::Editor() : W(ivec2(1920 * 0.75f, 1080 * 0.75f), true)
 	Window::initialize_system();
     glfwSetWindowUserPointer(W.handle(), &m_Camera);
     glfwSetScrollCallback(W.handle(), ScrollCallback);
+    glfwSetWindowUserPointer(W.handle(), this);
     glfwSetDropCallback(W.handle(), DropCallback);
 	MyImgui.Init(W.handle());
     MyRenderer.Init();
@@ -58,4 +59,9 @@ void Editor::UpdateImGui()
     {
         ImGui::End();
     }
+}
+
+void Editor::AddNewObject(std::vector<Triangle>& in_triangles)
+{
+    m_Objects.emplace_back(in_triangles);
 }
