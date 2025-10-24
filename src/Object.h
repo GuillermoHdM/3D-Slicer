@@ -4,7 +4,8 @@
 class Object
 {
 public:
-    Object(std::vector<Triangle>& triangles);
+    Object(const std::vector<Triangle>& triangles);
+    ~Object();
     struct Transform
     {
         glm::vec3 position;
@@ -16,8 +17,14 @@ public:
     void SetPosition(const glm::vec3& pos);
     void SetRotation(const glm::vec3& rot);
     void SetScale(const glm::vec3& scale);
+    void Draw(bool Wireframe);
+    //I wish I didnt have to do this, but there was a problem of copying VAOs around when 
+    //adding to the vector
+    void SetOpenGlThings();
 private:
 	std::vector<Triangle> m_Model;
     void CalculateTransform();
-
+    GLuint m_VAO = 0;
+    GLuint m_VBO = 0;
+    GLsizei m_VertexCount = 0;
 };

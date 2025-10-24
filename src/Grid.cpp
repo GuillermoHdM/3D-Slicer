@@ -40,4 +40,6 @@ void Grid::Draw(const glm::mat4& view, const glm::mat4& projection)
     glBindVertexArray(m_Vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
+    glUseProgram(0);
+
 }

@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include "../demo/Editor.h"
 
 void Camera::Update(GLFWwindow* window)
 {
@@ -54,7 +55,8 @@ void Camera::Scroll(double offset)
 //GLFW handles scroll only through callbacks, and it expects regular non member functions so here we are
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    Camera* camera = reinterpret_cast<Camera*>(glfwGetWindowUserPointer(window));
-    if (camera)
-        camera->Scroll(yoffset);
+    Editor* editor = static_cast<Editor*>(glfwGetWindowUserPointer(window));
+    if (editor)
+        editor->m_Camera.Scroll(yoffset);
+    
 }
