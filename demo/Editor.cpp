@@ -27,10 +27,29 @@ void Editor::R_Init()
     glAttachShader(MyShader, FragShader);
     glLinkProgram(MyShader);
     
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
     glClearColor(0.00f, 0.0f, 0.0f, 0.0f);
+
 }
 void Editor::R_Update()
 {
+    if (m_Config.m_Wireframe)//to see the faces on the wireframe
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDisable(GL_CULL_FACE);
+    }
+    else
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
+    }
     glUseProgram(MyShader);
     // Buscar ubicaciones de uniforms
     GLint locModel = glGetUniformLocation(MyShader, "model");

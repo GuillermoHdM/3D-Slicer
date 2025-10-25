@@ -74,19 +74,27 @@ void Object::SetOpenGlThings()
     for (const auto& tri : m_Model)
     {
         vertices.push_back(tri.A.x); vertices.push_back(tri.A.y); vertices.push_back(tri.A.z);
+        vertices.push_back(tri.n.x); vertices.push_back(tri.n.y); vertices.push_back(tri.n.z);
         vertices.push_back(tri.B.x); vertices.push_back(tri.B.y); vertices.push_back(tri.B.z);
+        vertices.push_back(tri.n.x); vertices.push_back(tri.n.y); vertices.push_back(tri.n.z);
         vertices.push_back(tri.C.x); vertices.push_back(tri.C.y); vertices.push_back(tri.C.z);
+        vertices.push_back(tri.n.x); vertices.push_back(tri.n.y); vertices.push_back(tri.n.z);
+
     }
 
-    m_VertexCount = static_cast<GLsizei>(vertices.size() / 3);
+    m_VertexCount = static_cast<GLsizei>(vertices.size() / 6);
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
     glBindVertexArray(m_VAO);
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray(0); // posición
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    //pos
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    //normal
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
     glBindVertexArray(0);
 }
