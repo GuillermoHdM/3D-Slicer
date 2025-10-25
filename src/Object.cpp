@@ -1,7 +1,7 @@
 #include <iostream>
 #include "Object.h"
 
-Object::Object(const std::vector<Triangle>& triangles) : m_Model(triangles)
+Object::Object(const std::vector<Triangle>& triangles, std::string name) : m_Model(triangles), m_Name(name)
 {
     m_Transform.position = glm::vec3(0.0f);
     m_Transform.rotation = glm::vec3(0.0f);
@@ -51,7 +51,6 @@ void Object::CalculateTransform()
 }
 void Object::Draw(bool Wireframe)
 {
-    std::cout << "[Object::Draw] binding VAO=" << m_VAO << " VBO=" << m_VBO << "\n";
     if (Wireframe)
     {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -82,7 +81,6 @@ void Object::SetOpenGlThings()
     m_VertexCount = static_cast<GLsizei>(vertices.size() / 3);
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
-    std::cout << "[Object] Created VAO=" << m_VAO << " VBO=" << m_VBO << " vertexCount=" << m_VertexCount << "\n";
     glBindVertexArray(m_VAO);
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
@@ -104,7 +102,7 @@ void Object::ActualMove(Object&& other) noexcept
     m_VBO = other.m_VBO;
     m_VertexCount = other.m_VertexCount;
     m_Transform = other.m_Transform;
-
+    m_Name = std::move(other.m_Name);
     // deactivate the other
     other.m_VAO = 0;
     other.m_VBO = 0;

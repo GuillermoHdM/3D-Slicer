@@ -11,3 +11,4 @@ void DropCallback(GLFWwindow* window, int count, const char** paths);
 
 void LoadBinarySTL(const std::string& path, std::vector<Triangle>& out_triangles);
 void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles);
+std::string GetFileName(const std::string& path);

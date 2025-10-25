@@ -46,10 +46,12 @@ void DropCallback(GLFWwindow* window, int count, const char** paths)
 {
 	//for debug vvv
 	std::cout << "Dropped File:\n";
+	std::vector<std::string> FileNames;//to support loading several objects
 	for (int i = 0; i < count; ++i) 
 	{
 		std::string path = paths[i];
 		std::cout << "  " << path << "\n";
+		FileNames.push_back(GetFileName(path));
 	}
 	//^^^^^^^^^^^^
 	Editor* editor = static_cast<Editor*>(glfwGetWindowUserPointer(window));//recover the editor pointer
@@ -74,7 +76,7 @@ void DropCallback(GLFWwindow* window, int count, const char** paths)
 				std::cout << "ASCII" << std::endl;
 				LoadAsciiSTL(path, triangles);
 			}
-			editor->AddNewObject(triangles);
+			editor->AddNewObject(triangles, FileNames[i]);
 		}
 		else 
 		{
@@ -187,4 +189,23 @@ void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles)
 	{
 		throw std::runtime_error("No triangles in STL ASCII: " + path);
 	}
+}
+
+
+std::string GetFileName(const std::string& path)
+{
+	//skip the path part
+	size_t slashPos = path.find_last_of("/\\");
+	//avoid the extension
+	size_t dotPos = path.find_last_of('.');
+
+	if (slashPos == std::string::npos)
+	{
+		slashPos = -1;
+	}
+	if (dotPos == std::string::npos || dotPos < slashPos)
+	{
+		dotPos = path.size();
+	}
+	return path.substr(slashPos + 1, dotPos - slashPos - 1);
 }

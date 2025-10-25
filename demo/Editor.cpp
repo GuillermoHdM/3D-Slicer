@@ -75,13 +75,26 @@ void Editor::UpdateImGui()
     if (ImGui::Begin("Editor"))
     {
         ImGui::Checkbox("Wireframe", &m_Config.m_Wireframe);
+        for (size_t i = 0; i < m_Objects.size(); i++)
+        {
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::Text(m_Objects[i].m_Name.c_str());
+            bool changed = false;
+            changed |= ImGui::InputFloat3("Position", &m_Objects[i].m_Transform.position.x);
+            changed |= ImGui::InputFloat3("Rotation", &m_Objects[i].m_Transform.rotation.x);
+            changed |= ImGui::InputFloat3("Scale", &m_Objects[i].m_Transform.scale.x);
+            ImGui::Separator();
+            ImGui::PopID();
+            if (changed)
+                m_Objects[i].CalculateTransform();
+        }
         ImGui::End();
     }
 }
 
-void Editor::AddNewObject(std::vector<Triangle>& in_triangles)
+void Editor::AddNewObject(std::vector<Triangle>& in_triangles, std::string name)
 {
-    m_Objects.push_back(Object(in_triangles));
+    m_Objects.push_back(Object(in_triangles, name));
     float spacing = 2.0f; // distancia entre objetos
     glm::vec3 newPosition = glm::vec3(m_Objects.size() * spacing, 0.0f, 0.0f);
     m_Objects.back().SetPosition(newPosition);
