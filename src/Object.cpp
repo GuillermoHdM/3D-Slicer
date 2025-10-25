@@ -52,16 +52,18 @@ void Object::CalculateTransform()
 void Object::Draw(bool Wireframe)
 {
     std::cout << "[Object::Draw] binding VAO=" << m_VAO << " VBO=" << m_VBO << "\n";
-    glBindVertexArray(m_VAO);
-    if (!Wireframe)
+    if (Wireframe)
     {
-        glDrawArrays(GL_TRIANGLES, 0, m_VertexCount);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
     else
     {
-        glDrawArrays(GL_LINES, 0, m_VertexCount);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+    glBindVertexArray(m_VAO);
+    glDrawArrays(GL_TRIANGLES, 0, m_VertexCount);
     glBindVertexArray(0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);//reset
 }
 
 void Object::SetOpenGlThings()

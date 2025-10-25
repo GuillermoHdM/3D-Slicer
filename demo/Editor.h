@@ -34,6 +34,10 @@ public:
 	~Editor();
 	void AddNewObject(std::vector<Triangle>& in_triangles);
 	bool Update();
+	struct Config
+	{
+		bool m_Wireframe = false;
+	} m_Config;
 };
 
 

@@ -45,7 +45,7 @@ void Editor::R_Update()
     {
         glm::mat4 model = obj.m_Transform.modelMatrix;
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &model[0][0]);
-        obj.Draw(false);
+        obj.Draw(m_Config.m_Wireframe);
     }
     
     glUseProgram(0);
@@ -74,6 +74,7 @@ void Editor::UpdateImGui()
 {
     if (ImGui::Begin("Editor"))
     {
+        ImGui::Checkbox("Wireframe", &m_Config.m_Wireframe);
         ImGui::End();
     }
 }
