@@ -7,11 +7,19 @@ Object::Object(const std::vector<Triangle>& triangles) : m_Model(triangles)
     m_Transform.rotation = glm::vec3(0.0f);
     m_Transform.scale = glm::vec3(1.0f);
     CalculateTransform();
+    SetOpenGlThings();
 }
 Object::~Object()
 {
-    glDeleteVertexArrays(1, &m_VAO);
-    glDeleteBuffers(1, &m_VBO);
+    //ONLY destroy the VAO & VBO if they have not been copied
+    if (m_VAO)
+    {
+        glDeleteVertexArrays(1, &m_VAO);
+    }
+    if (m_VBO)
+    {
+        glDeleteBuffers(1, &m_VBO);
+    }
 }
 
 void Object::SetPosition(const glm::vec3& pos)
@@ -58,7 +66,6 @@ void Object::Draw(bool Wireframe)
 
 void Object::SetOpenGlThings()
 {
-
     //OpenGl thingys
     std::vector<float> vertices;
     vertices.reserve(m_Model.size() * 9); // 3 vértices × 3 coords
@@ -84,3 +91,20 @@ void Object::SetOpenGlThings()
     glBindVertexArray(0);
 }
 
+Object::Object(Object&& other) noexcept
+{
+    ActualMove(std::move(other));
+}
+void Object::ActualMove(Object&& other) noexcept
+{
+    m_Model = std::move(other.m_Model);
+    m_VAO = other.m_VAO;
+    m_VBO = other.m_VBO;
+    m_VertexCount = other.m_VertexCount;
+    m_Transform = other.m_Transform;
+
+    // deactivate the other
+    other.m_VAO = 0;
+    other.m_VBO = 0;
+    other.m_VertexCount = 0;
+}

@@ -80,9 +80,8 @@ void Editor::UpdateImGui()
 
 void Editor::AddNewObject(std::vector<Triangle>& in_triangles)
 {
-    m_Objects.push_back(in_triangles);
+    m_Objects.push_back(Object(in_triangles));
     float spacing = 2.0f; // distancia entre objetos
     glm::vec3 newPosition = glm::vec3(m_Objects.size() * spacing, 0.0f, 0.0f);
     m_Objects.back().SetPosition(newPosition);
-    m_Objects.back().SetOpenGlThings();
 }

@@ -5,6 +5,9 @@ class Object
 {
 public:
     Object(const std::vector<Triangle>& triangles);
+    Object(const Object&) = delete;
+    Object& operator=(const Object&) = delete;
+    Object(Object&& other) noexcept;
     ~Object();
     struct Transform
     {
@@ -24,6 +27,7 @@ public:
 private:
 	std::vector<Triangle> m_Model;
     void CalculateTransform();
+    void ActualMove(Object&& other) noexcept;
     GLuint m_VAO = 0;
     GLuint m_VBO = 0;
     GLsizei m_VertexCount = 0;
