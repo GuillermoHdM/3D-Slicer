@@ -13,5 +13,10 @@ struct Triangle
 	glm::vec3 B;
 	glm::vec3 C;
 };
+struct Segment 
+{
+	glm::vec2 A;
+	glm::vec2 B;
+};
 GLuint CreateProgram(GLenum stage, const char const* ShaderText);
 #endif // OPENGL_HPP

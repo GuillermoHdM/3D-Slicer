@@ -28,8 +28,8 @@ public:
 
     std::string m_Name;
     void CalculateTransform();
-private:
 	std::vector<Triangle> m_Model;
+private:
     void ActualMove(Object&& other) noexcept;
     GLuint m_VAO = 0;
     GLuint m_VBO = 0;

@@ -27,6 +27,12 @@ void Editor::R_Init()
     glAttachShader(MyShader, FragShader);
     glLinkProgram(MyShader);
     
+    SlicesVtxShader = CreateProgram(GL_VERTEX_SHADER, SliceVtxShader);
+    SlicesFragShader = CreateProgram(GL_FRAGMENT_SHADER, SliceFragShader);
+    SlicesShader = glCreateProgram();
+    glAttachShader(SlicesShader, SlicesVtxShader);
+    glAttachShader(SlicesShader, SlicesFragShader);
+
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
@@ -66,7 +72,10 @@ void Editor::R_Update()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &model[0][0]);
         obj.Draw(m_Config.m_Wireframe);
     }
-    
+    if (m_Config.m_SliceDebug)
+    {
+        //DrawSliceDebug(slices[m_Config.m_CurrSlice], m_DebugShader, layer * layerHeight);
+    }
     glUseProgram(0);
 }
 
@@ -94,6 +103,47 @@ void Editor::UpdateImGui()
     if (ImGui::Begin("Editor"))
     {
         ImGui::Checkbox("Wireframe", &m_Config.m_Wireframe);
+        ImGui::Checkbox("Show Slices", &m_Config.m_SliceDebug);
+        if (m_Config.m_SliceDebug && m_Objects.size() != 0)
+        {
+            ImGui::Text("Select Object:");
+            if (ImGui::Button("<")) 
+            {
+                if (m_Config.m_SelectedObject > 0)
+                {
+                    m_Config.m_SelectedObject--;
+                    m_Config.DebugSlices.clear();
+                }
+            }
+            ImGui::SameLine();
+            ImGui::Text("Object %d / %d", m_Config.m_SelectedObject + 1, (int)m_Objects.size());
+            ImGui::SameLine();
+            if (ImGui::Button(">")) 
+            {
+                if (m_Config.m_SelectedObject < m_Objects.size() - 1)
+                {
+                    m_Config.m_SelectedObject++;
+                    m_Config.DebugSlices.clear();
+                }
+            }
+            if (m_Config.DebugSlices.empty())//not sliced yet
+            {
+                m_Config.DebugSlices = GenerateMeshSlices(m_Objects[m_Config.m_SelectedObject].m_Model, 1.0f);
+            }
+            if (ImGui::Button("-"))
+            {
+                if (m_Config.m_CurrSlice > 0)
+                    m_Config.m_CurrSlice--;
+            }
+            if (ImGui::Button("+")) 
+            { 
+                if (m_Config.m_CurrSlice < m_Config.DebugSlices.size() - 1)
+                    m_Config.m_CurrSlice++;
+            }
+            ImGui::SameLine();
+            ImGui::Text("Layer %d / %d", m_Config.m_CurrSlice + 1, (int)m_Config.DebugSlices.size());
+        }
+
         for (size_t i = 0; i < m_Objects.size(); i++)
         {
             ImGui::PushID(static_cast<int>(i));

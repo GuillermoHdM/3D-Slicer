@@ -80,3 +80,22 @@ const char* GridFragShader = R"(
 	    FragColor = vec4(mix(vec3(0.0), gridColor, gridLine), 1.0);
 	}
 	)";
+
+
+const char* SliceVtxShader = R"(
+	#version 330 core
+	layout (location = 0) in vec3 aPos;
+	uniform mat4 u_MVP;
+	void main() {
+	    gl_Position = u_MVP * vec4(aPos, 1.0);
+	}
+	)";
+
+const char* SliceFragShader = R"(
+	#version 330 core
+	out vec4 FragColor;
+	uniform vec4 u_Color;
+	void main() {
+	    FragColor = u_Color;
+	}
+	)";

@@ -4,6 +4,8 @@
 #include "Grid.h"
 #include "Camera.h"
 #include "Object.h"
+#include "Slicing.h"
+
 #include <vector>
 #include <utility>
 #include <string>
@@ -18,9 +20,14 @@ class Editor
 	//Renderer things vvv
 	void R_Init();
 	void R_Update();
+	void DrawSliceDebug();
 	GLuint MyShader;
 	GLuint VtxShader;
 	GLuint FragShader;
+
+	GLuint SlicesShader;
+	GLuint SlicesVtxShader;
+	GLuint SlicesFragShader;
 	//^^^^^^^^^^^^^^^^^
 	Grid m_Grid;
 	std::vector<Object> m_Objects;
@@ -38,6 +45,11 @@ public:
 	struct Config
 	{
 		bool m_Wireframe = false;
+		bool m_SliceDebug = false;
+		int m_CurrSlice = 0;
+		int m_TotSlices = -1;
+		int m_SelectedObject = 0;
+		std::vector<MeshSlice> DebugSlices;
 	} m_Config;
 };
 
