@@ -20,7 +20,7 @@ class Editor
 	//Renderer things vvv
 	void R_Init();
 	void R_Update();
-	void DrawSliceDebug();
+	void DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset);
 	GLuint MyShader;
 	GLuint VtxShader;
 	GLuint FragShader;

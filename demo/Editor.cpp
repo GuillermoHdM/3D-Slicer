@@ -32,6 +32,8 @@ void Editor::R_Init()
     SlicesShader = glCreateProgram();
     glAttachShader(SlicesShader, SlicesVtxShader);
     glAttachShader(SlicesShader, SlicesFragShader);
+    glLinkProgram(SlicesShader);
+
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -73,8 +75,8 @@ void Editor::R_Update()
         obj.Draw(m_Config.m_Wireframe);
     }
     if (m_Config.m_SliceDebug)
-    {
-        //DrawSliceDebug(slices[m_Config.m_CurrSlice], m_DebugShader, layer * layerHeight);
+    {                                                                          //  m_Config.m_CurrSlice      1.0f (layer heignt)
+        DrawSliceDebug(m_Config.DebugSlices[m_Config.m_CurrSlice], SlicesShader, m_Config.m_CurrSlice * 1.0f);
     }
     glUseProgram(0);
 }
@@ -167,4 +169,52 @@ void Editor::AddNewObject(std::vector<Triangle>& in_triangles, std::string name)
     float spacing = 2.0f; // distancia entre objetos
     glm::vec3 newPosition = glm::vec3(m_Objects.size() * spacing, 0.0f, 0.0f);
     m_Objects.back().SetPosition(newPosition);
+}
+
+void Editor::DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset)
+{
+    std::vector<glm::vec3> vertices;
+
+    // Convertir la slice (XY) a triángulos/segmentos en 3D con Z fija
+    for (const auto& contour : slice)
+    {
+        for (size_t i = 0; i < contour.size() - 1; ++i)
+        {
+            glm::vec2 a = contour[i];
+            glm::vec2 b = contour[i + 1];
+            vertices.push_back({ a.x, a.y, zOffset });
+            vertices.push_back({ b.x, b.y, zOffset });
+        }
+    }
+
+    if (vertices.empty())
+        return;
+
+    GLuint vao, vbo;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_DYNAMIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+
+    glUseProgram(shader);
+
+    // Set uniforms (MVP y color)
+    glm::mat4 MVP = m_Camera.m_Projection * m_Camera.m_View; // asumiendo que tienes m_Camera en el editor
+    GLint locMVP = glGetUniformLocation(shader, "u_MVP");
+    glUniformMatrix4fv(locMVP, 1, GL_FALSE, &MVP[0][0]);
+
+    GLint locColor = glGetUniformLocation(shader, "u_Color");
+    glUniform4f(locColor, 0.1f, 0.6f, 1.0f, 0.8f); // color azul claro semitransparente
+
+    glLineWidth(1.0f);//dont put anything other than 1, my drivers dont support it :(
+    glDrawArrays(GL_LINES, 0, (GLsizei)vertices.size());
+
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
 }
