@@ -76,7 +76,7 @@ void Editor::R_Update()
     }
     if (m_Config.m_SliceDebug)
     {                                                                          //  m_Config.m_CurrSlice      1.0f (layer heignt)
-        DrawSliceDebug(m_Config.DebugSlices[m_Config.m_CurrSlice], SlicesShader, m_Config.m_CurrSlice * 1.0f);
+        DrawSliceDebug(m_Config.DebugSlices[m_Config.m_CurrSlice], SlicesShader, m_Config.m_CurrSlice * m_Config.layerHeight);
     }
     glUseProgram(0);
 }
@@ -130,7 +130,7 @@ void Editor::UpdateImGui()
             }
             if (m_Config.DebugSlices.empty())//not sliced yet
             {
-                m_Config.DebugSlices = GenerateMeshSlices(m_Objects[m_Config.m_SelectedObject].m_Model, 1.0f);
+                m_Config.DebugSlices = GenerateMeshSlices(m_Objects[m_Config.m_SelectedObject].m_Model, m_Config.layerHeight);
             }
             if (ImGui::Button("-"))
             {
