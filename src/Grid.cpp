@@ -36,6 +36,9 @@ void Grid::Draw(const glm::mat4& view, const glm::mat4& projection)
 {
     glDisable(GL_CULL_FACE);
     glDepthMask(GL_FALSE);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glUseProgram(m_Shader);
     glUniformMatrix4fv(glGetUniformLocation(m_Shader, "view"), 1, GL_FALSE, &view[0][0]);
@@ -49,4 +52,5 @@ void Grid::Draw(const glm::mat4& view, const glm::mat4& projection)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
+    glDisable(GL_BLEND);
 }

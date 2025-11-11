@@ -76,8 +76,11 @@ const char* GridFragShader = R"(
 	
 	    float g = min(gx, gz);
 	    float gridLine = 1.0 - smoothstep(0.0, line, g);
+
+		//Higher alphas on the lines
+		float alpha = mix(0.0, 1.0, gridLine);  //background 0.1,  line 0.6
 	
-	    FragColor = vec4(mix(vec3(0.0), gridColor, gridLine), 1.0);
+	    FragColor = vec4(mix(vec3(0.0), gridColor, gridLine), alpha);
 	}
 	)";
 

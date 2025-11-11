@@ -130,6 +130,27 @@ void LoadBinarySTL(const std::string& path, std::vector<Triangle> &out_triangles
 	{
 		throw std::runtime_error("Something went wrong reading STL Binary: " + path);
 	}
+	glm::vec3 minPos(FLT_MAX);
+	glm::vec3 maxPos(-FLT_MAX);
+
+	for (const auto& tri : out_triangles)
+	{
+		minPos = glm::min(minPos, glm::min(tri.A, glm::min(tri.B, tri.C)));
+		maxPos = glm::max(maxPos, glm::max(tri.A, glm::max(tri.B, tri.C)));
+	}
+
+	glm::vec3 offset = glm::vec3(
+		(minPos.x + maxPos.x) * 0.5f,
+		minPos.y,
+		(minPos.z + maxPos.z) * 0.5f
+	);
+
+	for (auto& tri : out_triangles)
+	{
+		tri.A -= offset;
+		tri.B -= offset;
+		tri.C -= offset;
+	}
 }
 
 
@@ -188,6 +209,28 @@ void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles)
 	if (out_triangles.empty())
 	{
 		throw std::runtime_error("No triangles in STL ASCII: " + path);
+	}
+
+	glm::vec3 minPos(FLT_MAX);
+	glm::vec3 maxPos(-FLT_MAX);
+
+	for (const auto& tri : out_triangles)
+	{
+		minPos = glm::min(minPos, glm::min(tri.A, glm::min(tri.B, tri.C)));
+		maxPos = glm::max(maxPos, glm::max(tri.A, glm::max(tri.B, tri.C)));
+	}
+
+	glm::vec3 offset = glm::vec3(
+		(minPos.x + maxPos.x) * 0.5f, 
+		minPos.y,
+		(minPos.z + maxPos.z) * 0.5f
+	);
+
+	for (auto& tri : out_triangles)
+	{
+		tri.A -= offset;
+		tri.B -= offset;
+		tri.C -= offset;
 	}
 }
 

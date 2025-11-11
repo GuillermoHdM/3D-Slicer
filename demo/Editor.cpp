@@ -89,8 +89,8 @@ bool Editor::Update()
     m_Camera.Update(W.handle());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_Grid.Draw(m_Camera.m_View, m_Camera.m_Projection);
     R_Update();
+    m_Grid.Draw(m_Camera.m_View, m_Camera.m_Projection);
 	UpdateImGui();//get the display of imgui updated
 
     ivec2 windowSize = W.size();
