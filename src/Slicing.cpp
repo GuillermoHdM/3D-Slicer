@@ -3,24 +3,25 @@
 std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, float layerHeight)
 {
     std::vector<MeshSlice> slices;
-    float zMin = +FLT_MAX;
-    float zMax = -FLT_MAX;
+    float yMin = +FLT_MAX;
+    float yMax = -FLT_MAX;
+
     for (const auto& tri : model)
     {
-        zMin = std::min({ zMin, tri.A.z, tri.B.z, tri.C.z });
-        zMax = std::max({ zMax, tri.A.z, tri.B.z, tri.C.z });
+        yMin = std::min({ yMin, tri.A.y, tri.B.y, tri.C.y });
+        yMax = std::max({ yMax, tri.A.y, tri.B.y, tri.C.y });
     }
 
-    int numLayers = static_cast<int>((zMax - zMin) / layerHeight) + 1;
+    int numLayers = static_cast<int>((yMax - yMin) / layerHeight) + 1;
 
     for (int i = 0; i < numLayers; ++i)
     {
-        float z = zMin + i * layerHeight;
+        float y = yMin + i * layerHeight;
         std::vector<Segment> layerSegments;
 
         for (const auto& tri : model)
         {
-            auto seg = IntersectTriangleWithPlane(tri, z);
+            auto seg = IntersectTriangleWithPlane(tri, y);
             if (seg) layerSegments.push_back(*seg);
         }
 
@@ -30,10 +31,10 @@ std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, fl
     return slices;
 }
 
-std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float z)
+std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float y)
 {
     const glm::vec3 verts[3] = { tri.A, tri.B, tri.C };
-    if (fabs(tri.A.z - z) < 1e-6f && fabs(tri.B.z - z) < 1e-6f && fabs(tri.C.z - z) < 1e-6f)
+    if (fabs(tri.A.y - y) < 1e-6f && fabs(tri.B.y - y) < 1e-6f && fabs(tri.C.y - y) < 1e-6f)
     {
         return std::nullopt;
     }
@@ -45,13 +46,13 @@ std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float z)
         const glm::vec3& b = verts[(i + 1) % 3];
 
         // Si la arista cruza el plano z
-        bool above = a.z >= z;
-        bool below = b.z >= z;
+        bool above = a.y >= y;
+        bool below = b.y >= y;
         if (above != below)
         {
-            float t = (z - a.z) / (b.z - a.z);
+            float t = (y - a.y) / (b.y - a.y);
             glm::vec3 p = a + t * (b - a);
-            points.push_back(glm::vec2(p.x, p.y));
+            points.push_back(glm::vec2(p.x, p.z));
         }
     }
 
