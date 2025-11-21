@@ -27,6 +27,7 @@ void Editor::R_Init()
     glAttachShader(MyShader, FragShader);
     glLinkProgram(MyShader);
     
+    //Debug Slice vvvv
     SlicesVtxShader = CreateProgram(GL_VERTEX_SHADER, SliceVtxShader);
     SlicesFragShader = CreateProgram(GL_FRAGMENT_SHADER, SliceFragShader);
     SlicesShader = glCreateProgram();
@@ -34,7 +35,17 @@ void Editor::R_Init()
     glAttachShader(SlicesShader, SlicesFragShader);
     glLinkProgram(SlicesShader);
 
-
+    glGenTextures(1, &SliceDebuTex);
+    glBindTexture(GL_TEXTURE_2D, SliceDebuTex);
+    //                                        w     h
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenFramebuffers(1, &SliceDebugFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, SliceDebugFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SliceDebuTex, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    //^^^^^^^^^^^^^^^^
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
@@ -144,6 +155,8 @@ void Editor::UpdateImGui()
             }
             ImGui::SameLine();
             ImGui::Text("Layer %d / %d", m_Config.m_CurrSlice + 1, (int)m_Config.DebugSlices.size());
+
+            ImGui::Image((ImTextureID)(intptr_t)SliceDebuTex, ImVec2(512, 512));
         }
 
         for (size_t i = 0; i < m_Objects.size(); i++)
@@ -173,23 +186,69 @@ void Editor::AddNewObject(std::vector<Triangle>& in_triangles, std::string name)
 
 void Editor::DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset)
 {
-    std::vector<glm::vec3> vertices;
+    //save our main viewport
+    GLint prevViewport[4];//remember opengl defines a viewport as x offset, y offset, w and h
+    glGetIntegerv(GL_VIEWPORT, prevViewport);
 
-    // Convertir la slice (XY) a triángulos/segmentos en 3D con Z fija
+    //bind our debug viewport
+    glBindFramebuffer(GL_FRAMEBUFFER, SliceDebugFBO);
+    //prepare to draw
+    glViewport(0, 0, 512, 512);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //lets center it
+    float minX = FLT_MAX, minY = FLT_MAX;
+    float maxX = -FLT_MAX, maxY = -FLT_MAX;
+
+    for (auto& contour : slice)
+    {
+        for (auto& p : contour)
+        {
+            minX = std::min(minX, p.x);
+            minY = std::min(minY, p.y);
+            maxX = std::max(maxX, p.x);
+            maxY = std::max(maxY, p.y);
+        }
+    }
+
+    float w = maxX - minX;
+    float h = maxY - minY;
+    float maxDim = std::max(w, h);
+
+    //santiy check
+    if (maxDim < 0.0001f)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+        return;
+    }
+    float scale = 1.8f / maxDim;
+    glm::vec2 center(minX + w * 0.5f, minY + h * 0.5f);
+
+    //build and center the vertices from our slices
+    std::vector<glm::vec3> vertices;
+    vertices.reserve(slice.size() * 32);
     for (const auto& contour : slice)
     {
         for (size_t i = 0; i < contour.size() - 1; ++i)
         {
-            glm::vec2 a = contour[i];
-            glm::vec2 b = contour[i + 1];
-            vertices.push_back({ a.x, a.y, zOffset });
-            vertices.push_back({ b.x, b.y, zOffset });
+            glm::vec2 a = (contour[i] - center) * scale;
+            glm::vec2 b = (contour[i + 1] - center) * scale;
+
+            vertices.push_back({ a.x, a.y, 0.0f });
+            vertices.push_back({ b.x, b.y, 0.0f });
         }
     }
-
+    //if nothing to draw early exit
     if (vertices.empty())
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
         return;
+    }
 
+    //prepare to OpenGl draw
     GLuint vao, vbo;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
@@ -200,21 +259,24 @@ void Editor::DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-
     glUseProgram(shader);
 
-    // Set uniforms (MVP y color)
-    glm::mat4 MVP = m_Camera.m_Projection * m_Camera.m_View; // asumiendo que tienes m_Camera en el editor
+    //set uniforms
+    glm::mat4 MVP = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
     GLint locMVP = glGetUniformLocation(shader, "u_MVP");
     glUniformMatrix4fv(locMVP, 1, GL_FALSE, &MVP[0][0]);
-
     GLint locColor = glGetUniformLocation(shader, "u_Color");
-    glUniform4f(locColor, 0.1f, 0.6f, 1.0f, 0.8f); // color azul claro semitransparente
+    glUniform4f(locColor, 0.1f, 0.6f, 1.0f, 0.9f);
 
-    glLineWidth(1.0f);//dont put anything other than 1, my drivers dont support it :(
+    glLineWidth(1.0f);//careful, drivers dont like weird values here!
     glDrawArrays(GL_LINES, 0, (GLsizei)vertices.size());
 
+    //recover previous viewport and draw
     glBindVertexArray(0);
     glDeleteBuffers(1, &vbo);
     glDeleteVertexArrays(1, &vao);
+    glUseProgram(0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);//recover previous viewport
 }

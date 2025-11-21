@@ -28,6 +28,9 @@ class Editor
 	GLuint SlicesShader;
 	GLuint SlicesVtxShader;
 	GLuint SlicesFragShader;
+
+	GLuint SliceDebuTex;
+	GLuint SliceDebugFBO;
 	//^^^^^^^^^^^^^^^^^
 	Grid m_Grid;
 	std::vector<Object> m_Objects;
