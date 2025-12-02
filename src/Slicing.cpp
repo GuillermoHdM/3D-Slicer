@@ -104,3 +104,4 @@ MeshSlice ConnectSegments(const std::vector<Segment>& segments, float tol)
 
     return contours;
 }
+

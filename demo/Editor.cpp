@@ -2,6 +2,7 @@
 #include "Shaders.h"
 #include "OpenGl.hpp"
 #include "FileLoader.h"
+#include "Support.h"
 #include <random>
 #include <iostream>
 Editor::Editor() : W(ivec2(1920 * 0.75f, 1080 * 0.75f), true)
@@ -172,6 +173,12 @@ void Editor::UpdateImGui()
             if (changed)
                 m_Objects[i].CalculateTransform();
         }
+
+        if (ImGui::Button("Generate Supports"))
+        {
+            GenerateSupports(m_Objects[m_Config.m_SelectedObject].m_Model, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix);
+        }
+
         ImGui::End();
     }
 }
