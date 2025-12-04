@@ -176,10 +176,7 @@ void Editor::UpdateImGui()
 
         if (ImGui::Button("Generate Supports"))
         {
-            for (auto& obj : m_Objects)
-            {
-                GenerateSupports(obj[m_Config.m_SelectedObject].m_Model, obj[m_Config.m_SelectedObject].m_Transform.modelMatrix);
-            }
+            GenerateSupports(m_Objects[m_Config.m_SelectedObject].m_Model, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix, m_Objects[m_Config.m_SelectedObject].m_Supports);
         }
 
         ImGui::End();

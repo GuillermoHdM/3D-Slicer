@@ -29,6 +29,7 @@ public:
     std::string m_Name;
     void CalculateTransform();
 	std::vector<Triangle> m_Model;
+    std::vector<Triangle> m_Supports;
 private:
     void ActualMove(Object&& other) noexcept;
     GLuint m_VAO = 0;

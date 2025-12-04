@@ -1,24 +1,13 @@
+#include <iostream>
 #include "Support.h"
 
-void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS)
+void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<Triangle>& outSupports)
 {
     //***get the model into world space***
-    std::vector<Triangle> worldModel;
-    worldModel.reserve(model.size());
-
-    for (auto& tri : model)
-    {
-        Triangle t;
-        t.A = glm::vec3(TRS * glm::vec4(tri.A, 1.0));
-        t.B = glm::vec3(TRS * glm::vec4(tri.B, 1.0));
-        t.C = glm::vec3(TRS * glm::vec4(tri.C, 1.0));
-        t.n = glm::normalize(glm::mat3(TRS) * tri.n);
-
-        worldModel.push_back(t);
-    }
+    std::vector<Triangle> worldModel = ToWorldSpace(model, TRS);
     //************************************
     //***get triangles that need support by angle***
-    float maxAngle = glm::radians(45.0f); // configurable
+    float maxAngle = glm::radians(45.0f); // configurable (OPTION)
 
     std::vector<const Triangle*> overhangTriangles;
 
@@ -37,66 +26,65 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS)
     for (auto* tri : overhangTriangles)
     {
         SupportColumn col = ProjectTriangle(*tri, worldModel);
-        if (!col.Bot.empty())
-            supportColumns.push_back(col);
+        for (int i = 0; i < 3; ++i)
+        {
+            glm::vec3 top = col.Top[i];
+            glm::vec3 bot = col.Bot[i];
+
+            CreateSupportPillar(top, bot, outSupports);
+        }
+
     }
-    //***************************************************************
 }
 
 
-SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& worldModel)
+SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& world)
 {
     SupportColumn col;
 
-    glm::vec3 verts[3] = { tri.A, tri.B, tri.C };
-    glm::vec3 down = glm::vec3(0, -1, 0);
-
     for (int i = 0; i < 3; ++i)
     {
-        glm::vec3 origin = verts[i];
-        glm::vec3 hitPoint;
-        float bestT = FLT_MAX;
-        bool hit = false;
+        glm::vec3 v = tri.A;
+        if (i == 1) v = tri.B;
+        if (i == 2) v = tri.C;
 
-        //searchh the closest triangle under it
-        for (const Triangle& other : worldModel)
+        float highestY = -FLT_MAX;
+        glm::vec3 bestHit(v.x, 0.0f, v.z); // default floor hit
+
+        glm::vec3 rayOrigin = v;
+        glm::vec3 rayDir = glm::vec3(0, -1, 0);
+
+        for (const Triangle& other : world)
         {
-            //avoid self collition
-            if (&other == &tri)
-                continue;
+            if (other.id == tri.id)
+                continue; // avoid self-collision
 
             float t;
-            glm::vec3 pt;
+            glm::vec3 hit;
 
-            if (RayIntersectTriangle(origin, down, other, t, pt))
+            if (RayIntersectTriangle(rayOrigin, rayDir, other, t, hit))
             {
-                if (t < bestT)
+                if (glm::any(glm::isnan(hit))) {
+                    std::cout << "NaN en hit!!!\n";
+                }
+                if (hit.y < v.y && hit.y > highestY)
                 {
-                    bestT = t;
-                    hitPoint = pt;
-                    hit = true;
+                    highestY = hit.y;
+                    bestHit = hit;
                 }
             }
         }
 
-        if (hit)
-        {
-            col.Bot.push_back(hitPoint);
+        col.Top.push_back(v);
+        col.Bot.push_back(bestHit);
+        if (glm::any(glm::isnan(bestHit))) {
+            std::cout << "NaN en bestHit!!!\n";
         }
-        else
-        {
-            // No collition, reaches the ground
-            glm::vec3 bed = origin;
-            bed.y = 0.0f;
-            col.Bot.push_back(bed);
-        }
-
-        col.Top.push_back(origin);
     }
 
     return col;
 }
-bool RayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const Triangle& tri, float& out_t, glm::vec3& out_point)
+bool RayIntersectTriangle(const glm::vec3& rayOrigin,const glm::vec3& rayDir,const Triangle& tri,float& out_t,glm::vec3& out_hit)
 {
     const float EPS = 1e-6f;
 
@@ -105,23 +93,107 @@ bool RayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir, c
     glm::vec3 p = glm::cross(rayDir, e2);
 
     float det = glm::dot(e1, p);
-    if (fabs(det) < EPS) return false; //no intersection
+    if (fabs(det) < EPS)
+        return false; // parallel or no hit
 
     float invDet = 1.0f / det;
     glm::vec3 tvec = rayOrigin - tri.A;
 
     float u = glm::dot(tvec, p) * invDet;
-    if (u < 0.0f || u > 1.0f) return false;
+    if (u < 0.0f || u > 1.0f)
+        return false;
 
     glm::vec3 q = glm::cross(tvec, e1);
     float v = glm::dot(rayDir, q) * invDet;
-    if (v < 0.0f || u + v > 1.0f) return false;
+    if (v < 0.0f || u + v > 1.0f)
+        return false;
 
-    float t = glm::dot(e2, q) * invDet; // Ray dist
-
-    if (t < 0) return false; //Only down
+    float t = glm::dot(e2, q) * invDet;
+    if (t < 0.0f)
+        return false; // hit is behind ray origin
 
     out_t = t;
-    out_point = rayOrigin + t * rayDir;
+    out_hit = rayOrigin + rayDir * t;
     return true;
+}
+void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<Triangle>& outSupports)
+{
+    float R = 0.5f; //Support size (Option)
+
+    glm::vec3 axis = bot - top;
+    if (glm::length(axis) < 1e-6f) {
+        // columna nula, ignorarla
+        return;
+    }
+
+    glm::vec3 dir = glm::normalize(axis);
+
+    // si dir es paralelo a Y, usa otro up artificial
+    glm::vec3 up = fabs(dir.y) > 0.99f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+
+    glm::vec3 right = glm::normalize(glm::cross(dir, up));
+    glm::vec3 forward = glm::normalize(glm::cross(dir, right));
+
+    right *= R;
+    forward *= R;
+
+    //top 4 vert
+    glm::vec3 t0 = top + right + forward;
+    glm::vec3 t1 = top - right + forward;
+    glm::vec3 t2 = top - right - forward;
+    glm::vec3 t3 = top + right - forward;
+
+    //bot 4 vert
+    glm::vec3 b0 = bot + right + forward;
+    glm::vec3 b1 = bot - right + forward;
+    glm::vec3 b2 = bot - right - forward;
+    glm::vec3 b3 = bot + right - forward;
+
+    
+    //Generate 12 triangles
+    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C)
+    {
+        outSupports.push_back({ A,B,C, glm::normalize(glm::cross(B - A, C - A)) });
+    };
+
+    //Top Face
+    addTri(t0, t1, t2);
+    addTri(t0, t2, t3);
+    std::cout << "Top:" << std::endl;
+    std::cout << t0.x << "," << t0.y << "," << t0.z << std::endl;
+    std::cout << t1.x << "," << t1.y << "," << t1.z << std::endl;
+    std::cout << t2.x << "," << t2.y << "," << t2.z << std::endl;
+
+    //Bot face
+    addTri(b0, b2, b1);
+    addTri(b0, b3, b2);
+    std::cout << "Bot:" << std::endl;
+    std::cout << b0.x << "," << b0.y << "," << b0.z << std::endl;
+    std::cout << b1.x << "," << b1.y << "," << b1.z << std::endl;
+    std::cout << b2.x << "," << b2.y << "," << b2.z << std::endl;
+    //Sides
+    addTri(t0, b0, b1);  addTri(t0, b1, t1);
+    addTri(t1, b1, b2);  addTri(t1, b2, t2);
+    addTri(t2, b2, b3);  addTri(t2, b3, t3);
+    addTri(t3, b3, b0);  addTri(t3, b0, t0);
+}
+
+std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm::mat4& TRS)
+{
+    std::vector<Triangle> world;
+    world.reserve(model.size());
+
+    for (const Triangle& tri : model)
+    {
+        Triangle t;
+        t.A = glm::vec3(TRS * glm::vec4(tri.A, 1.0f));
+        t.B = glm::vec3(TRS * glm::vec4(tri.B, 1.0f));
+        t.C = glm::vec3(TRS * glm::vec4(tri.C, 1.0f));
+        t.n = glm::normalize(glm::mat3(TRS) * tri.n);
+        t.id = tri.id;   // preserve the ID
+
+        world.push_back(t);
+    }
+
+    return world;
 }
