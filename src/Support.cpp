@@ -1,7 +1,7 @@
 #include <iostream>
 #include "Support.h"
 
-void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<Triangle>& outSupports)
+void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports)
 {
     //***get the model into world space***
     std::vector<Triangle> worldModel = ToWorldSpace(model, TRS);
@@ -116,9 +116,10 @@ bool RayIntersectTriangle(const glm::vec3& rayOrigin,const glm::vec3& rayDir,con
     out_hit = rayOrigin + rayDir * t;
     return true;
 }
-void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<Triangle>& outSupports)
+
+void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<glm::vec3>& outSupports)
 {
-    float R = 0.5f; //Support size (Option)
+    float R = 0.005f; //Support size (Option)
 
     glm::vec3 axis = bot - top;
     if (glm::length(axis) < 1e-6f) {
@@ -153,24 +154,18 @@ void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector
     //Generate 12 triangles
     auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C)
     {
-        outSupports.push_back({ A,B,C, glm::normalize(glm::cross(B - A, C - A)) });
+        outSupports.push_back(A);
+        outSupports.push_back(B);
+        outSupports.push_back(C);
     };
 
     //Top Face
     addTri(t0, t1, t2);
     addTri(t0, t2, t3);
-    std::cout << "Top:" << std::endl;
-    std::cout << t0.x << "," << t0.y << "," << t0.z << std::endl;
-    std::cout << t1.x << "," << t1.y << "," << t1.z << std::endl;
-    std::cout << t2.x << "," << t2.y << "," << t2.z << std::endl;
 
     //Bot face
     addTri(b0, b2, b1);
     addTri(b0, b3, b2);
-    std::cout << "Bot:" << std::endl;
-    std::cout << b0.x << "," << b0.y << "," << b0.z << std::endl;
-    std::cout << b1.x << "," << b1.y << "," << b1.z << std::endl;
-    std::cout << b2.x << "," << b2.y << "," << b2.z << std::endl;
     //Sides
     addTri(t0, b0, b1);  addTri(t0, b1, t1);
     addTri(t1, b1, b2);  addTri(t1, b2, t2);

@@ -85,6 +85,10 @@ void Editor::R_Update()
         glm::mat4 model = obj.m_Transform.modelMatrix;
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &model[0][0]);
         obj.Draw(m_Config.m_Wireframe);
+        //Supports are already computed in world space
+        glm::mat4 identity(1.0f);
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, &identity[0][0]);
+        obj.DrawSupports(m_Config.m_Wireframe);
     }
     if (m_Config.m_SliceDebug)
     {                                                                          //  m_Config.m_CurrSlice      1.0f (layer heignt)
@@ -176,7 +180,8 @@ void Editor::UpdateImGui()
 
         if (ImGui::Button("Generate Supports"))
         {
-            GenerateSupports(m_Objects[m_Config.m_SelectedObject].m_Model, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix, m_Objects[m_Config.m_SelectedObject].m_Supports);
+            GenerateSupports(m_Objects[m_Config.m_SelectedObject].m_Model, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix, m_Objects[m_Config.m_SelectedObject].m_SupportVertices);
+            m_Objects[m_Config.m_SelectedObject].SetSupportsGL();
         }
 
         ImGui::End();

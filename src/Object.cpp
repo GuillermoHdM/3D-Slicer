@@ -62,9 +62,30 @@ void Object::Draw(bool Wireframe)
     glBindVertexArray(m_VAO);
     glDrawArrays(GL_TRIANGLES, 0, m_VertexCount);
     glBindVertexArray(0);
+
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);//reset
 }
+void Object::DrawSupports(bool Wireframe)
+{
+    if (Wireframe)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
+    else
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
 
+    if (m_SupportVertices.empty())
+        return;
+
+    glBindVertexArray(m_SupportVAO);
+    glDrawArrays(GL_TRIANGLES, 0, m_SupportVertices.size());
+    glBindVertexArray(0);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);//reset
+
+}
 void Object::SetOpenGlThings()
 {
     //OpenGl thingys
@@ -108,11 +129,39 @@ void Object::ActualMove(Object&& other) noexcept
     m_Model = std::move(other.m_Model);
     m_VAO = other.m_VAO;
     m_VBO = other.m_VBO;
+    m_SupportVAO = other.m_SupportVAO;
+    m_SupportVBO = other.m_SupportVBO;
+
     m_VertexCount = other.m_VertexCount;
     m_Transform = other.m_Transform;
     m_Name = std::move(other.m_Name);
     // deactivate the other
     other.m_VAO = 0;
     other.m_VBO = 0;
+    other.m_SupportVAO = 0;
+    other.m_SupportVBO = 0;
     other.m_VertexCount = 0;
+}
+
+void Object::SetSupportsGL()
+{
+    if (m_SupportVAO == 0)
+        glGenVertexArrays(1, &m_SupportVAO);
+    if (m_SupportVBO == 0)
+        glGenBuffers(1, &m_SupportVBO);
+
+    glBindVertexArray(m_SupportVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_SupportVBO);
+
+    glBufferData(GL_ARRAY_BUFFER,
+        m_SupportVertices.size() * sizeof(glm::vec3),
+        m_SupportVertices.data(),
+        GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3),
+        (void*)0);
+
+    glBindVertexArray(0);
 }
