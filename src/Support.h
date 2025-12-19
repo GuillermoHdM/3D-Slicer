@@ -15,6 +15,7 @@ bool RayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir, c
 void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<glm::vec3>& outSupports);
 std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm::mat4& TRS);
 bool ProjectSinglePoint(const glm::vec3& top, const std::vector<Triangle>& world, glm::vec3& outBottom);
+void CreateSupportBase(const glm::vec3& bot, std::vector<glm::vec3>& outSupports);
 
 //to know which supports are not needed (spacing)
 struct GridKey 

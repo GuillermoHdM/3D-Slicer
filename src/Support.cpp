@@ -3,7 +3,9 @@
 #include "Support.h"
 
 float SupportSpacing = 0.5f;
-float SupportRadius = 0.005f; //Support size (Option)
+float SupportRadius = 0.02f; //Support size (Option)
+float BaseSize = 0.5f;
+float BaseHeight = 0.05f;
 
 void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports)
 {
@@ -32,6 +34,7 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         ProjectSinglePoint(top, world, bottom);
 
         occupied.insert(key);
+        CreateSupportBase(bottom, outSupports);
         CreateSupportPillar(top, bottom, outSupports);
     }
 }
@@ -164,10 +167,14 @@ void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector
     addTri(b0, b2, b1);
     addTri(b0, b3, b2);
     //Sides
-    addTri(t0, b0, b1);  addTri(t0, b1, t1);
-    addTri(t1, b1, b2);  addTri(t1, b2, t2);
-    addTri(t2, b2, b3);  addTri(t2, b3, t3);
-    addTri(t3, b3, b0);  addTri(t3, b0, t0);
+    addTri(t0, b0, b1);
+    addTri(t0, b1, t1);
+    addTri(t1, b1, b2);
+    addTri(t1, b2, t2);
+    addTri(t2, b2, b3);
+    addTri(t2, b3, t3);
+    addTri(t3, b3, b0);
+    addTri(t3, b0, t0);
 }
 
 std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm::mat4& TRS)
@@ -218,4 +225,41 @@ bool ProjectSinglePoint(const glm::vec3& top, const std::vector<Triangle>& world
         outBottom = glm::vec3(top.x, 0.0f, top.z); // bed
 
     return true;
+}
+
+
+void CreateSupportBase(const glm::vec3& bot, std::vector<glm::vec3>& outSupports)
+{
+    float h = BaseHeight;
+    float s = BaseSize * 0.5f;
+
+    glm::vec3 b0(bot.x - s, 0.0f, bot.z - s);
+    glm::vec3 b1(bot.x + s, 0.0f, bot.z - s);
+    glm::vec3 b2(bot.x + s, 0.0f, bot.z + s);
+    glm::vec3 b3(bot.x - s, 0.0f, bot.z + s);
+
+    glm::vec3 t0 = b0 + glm::vec3(0, h, 0);
+    glm::vec3 t1 = b1 + glm::vec3(0, h, 0);
+    glm::vec3 t2 = b2 + glm::vec3(0, h, 0);
+    glm::vec3 t3 = b3 + glm::vec3(0, h, 0);
+
+    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C)
+    {
+        outSupports.push_back(A);
+        outSupports.push_back(B);
+        outSupports.push_back(C);
+    };
+    addTri(t0, t1, t2);
+    addTri(t0, t2, t3);
+    addTri(b0, b2, b1);
+    addTri(b0, b3, b2);
+
+    addTri(b0, b1, t1);
+    addTri(b0, t1, t0);
+    addTri(b1, b2, t2);
+    addTri(b1, t2, t1);
+    addTri(b2, b3, t3);
+    addTri(b2, t3, t2);
+    addTri(b3, b0, t0);
+    addTri(b3, t0, t3);
 }
