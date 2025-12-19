@@ -7,59 +7,32 @@ float SupportRadius = 0.005f; //Support size (Option)
 
 void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports)
 {
-    //***get the model into world space***
-    std::vector<Triangle> worldModel = ToWorldSpace(model, TRS);
-    //************************************
-    //***get triangles that need support by angle***
-    float maxAngle = glm::radians(45.0f); // configurable (OPTION)
+    auto world = ToWorldSpace(model, TRS);//pass to world space
 
-    std::vector<const Triangle*> overhangTriangles;
+    float maxAngle = glm::radians(45.0f);//what we consider an overhang
+    std::unordered_set<GridKey, GridKeyHash> occupied;//to avoid multiple supports in the same "tile"
 
-    for (auto& tri : worldModel)
+    for (const Triangle& tri : world)//for each triangle
     {
-        float dp = glm::dot(glm::normalize(tri.n), glm::vec3(0, 1, 0));
-        float angle = acos(dp);
+        float angle = acos(glm::dot(glm::normalize(tri.n), glm::vec3(0, 1, 0)));
+        if (angle <= maxAngle)
+            continue;
 
-        if (angle > maxAngle)
-            overhangTriangles.push_back(&tri);
-    }
-    //************************************
-    //Proyect down the triangles to actually get the support volume
-    std::vector<SupportColumn> supportColumns;
-    std::unordered_set<GridKey, GridKeyHash> occupiedCells;//to avoid over supporting
-    //to avoid over supporting
-    glm::vec3 minPos(FLT_MAX), maxPos(-FLT_MAX);
-    for (auto& tri : worldModel) {
-        minPos = glm::min(minPos, tri.A);
-        minPos = glm::min(minPos, tri.B);
-        minPos = glm::min(minPos, tri.C);
+        glm::vec3 top = (tri.A + tri.B + tri.C) / 3.0f;//Center of the triangle
 
-        maxPos = glm::max(maxPos, tri.A);
-        maxPos = glm::max(maxPos, tri.B);
-        maxPos = glm::max(maxPos, tri.C);
-    }
-    glm::vec3 gridOrigin = minPos;
-    //
-    for (auto* tri : overhangTriangles)
-    {
-        SupportColumn col = ProjectTriangle(*tri, worldModel);
-        for (int i = 0; i < 3; ++i)
-        {
-            glm::vec3 top = col.Top[i];
-            glm::vec3 bot = col.Bot[i];
+        GridKey key{
+            int(floor(top.x / SupportSpacing)),
+            int(floor(top.z / SupportSpacing))
+        };
 
-            GridKey key;
-            key.x = int(floor((top.x - gridOrigin.x) / SupportSpacing));
-            key.y = int(floor((top.z - gridOrigin.z) / SupportSpacing));
+        if (occupied.contains(key))
+            continue;
 
-            if (occupiedCells.contains(key))//O(n^2)
-            {
-                continue; // ya hay soporte cerca
-            }
-            occupiedCells.insert(key);
-            CreateSupportPillar(top, bot, outSupports);
-        }
+        glm::vec3 bottom;
+        ProjectSinglePoint(top, world, bottom);
 
+        occupied.insert(key);
+        CreateSupportPillar(top, bottom, outSupports);
     }
 }
 
@@ -91,7 +64,7 @@ SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& 
             if (RayIntersectTriangle(rayOrigin, rayDir, other, t, hit))
             {
                 if (glm::any(glm::isnan(hit))) {
-                    std::cout << "NaN en hit!!!\n";
+                    std::cout << "NaN on hit!!!\n";
                 }
                 if (hit.y < v.y && hit.y > highestY)
                 {
@@ -104,7 +77,7 @@ SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& 
         col.Top.push_back(v);
         col.Bot.push_back(bestHit);
         if (glm::any(glm::isnan(bestHit))) {
-            std::cout << "NaN en bestHit!!!\n";
+            std::cout << "NaN on bestHit!!!\n";
         }
     }
 
@@ -215,4 +188,34 @@ std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm
     }
 
     return world;
+}
+
+
+
+bool ProjectSinglePoint(const glm::vec3& top, const std::vector<Triangle>& world, glm::vec3& outBottom)
+{
+    glm::vec3 rayDir(0, -1, 0);
+    float bestY = -FLT_MAX;
+    bool hit = false;
+
+    for (const Triangle& t : world)
+    {
+        float dist;
+        glm::vec3 hitPoint;
+
+        if (RayIntersectTriangle(top, rayDir, t, dist, hitPoint))
+        {
+            if (hitPoint.y < top.y && hitPoint.y > bestY)
+            {
+                bestY = hitPoint.y;
+                outBottom = hitPoint;
+                hit = true;
+            }
+        }
+    }
+
+    if (!hit)
+        outBottom = glm::vec3(top.x, 0.0f, top.z); // bed
+
+    return true;
 }
