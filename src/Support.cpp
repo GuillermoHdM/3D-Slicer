@@ -1,5 +1,9 @@
 #include <iostream>
+#include <unordered_set>
 #include "Support.h"
+
+float SupportSpacing = 0.5f;
+float SupportRadius = 0.005f; //Support size (Option)
 
 void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports)
 {
@@ -22,7 +26,20 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
     //************************************
     //Proyect down the triangles to actually get the support volume
     std::vector<SupportColumn> supportColumns;
+    std::unordered_set<GridKey, GridKeyHash> occupiedCells;//to avoid over supporting
+    //to avoid over supporting
+    glm::vec3 minPos(FLT_MAX), maxPos(-FLT_MAX);
+    for (auto& tri : worldModel) {
+        minPos = glm::min(minPos, tri.A);
+        minPos = glm::min(minPos, tri.B);
+        minPos = glm::min(minPos, tri.C);
 
+        maxPos = glm::max(maxPos, tri.A);
+        maxPos = glm::max(maxPos, tri.B);
+        maxPos = glm::max(maxPos, tri.C);
+    }
+    glm::vec3 gridOrigin = minPos;
+    //
     for (auto* tri : overhangTriangles)
     {
         SupportColumn col = ProjectTriangle(*tri, worldModel);
@@ -31,6 +48,15 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
             glm::vec3 top = col.Top[i];
             glm::vec3 bot = col.Bot[i];
 
+            GridKey key;
+            key.x = int(floor((top.x - gridOrigin.x) / SupportSpacing));
+            key.y = int(floor((top.z - gridOrigin.z) / SupportSpacing));
+
+            if (occupiedCells.contains(key))//O(n^2)
+            {
+                continue; // ya hay soporte cerca
+            }
+            occupiedCells.insert(key);
             CreateSupportPillar(top, bot, outSupports);
         }
 
@@ -119,8 +145,6 @@ bool RayIntersectTriangle(const glm::vec3& rayOrigin,const glm::vec3& rayDir,con
 
 void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<glm::vec3>& outSupports)
 {
-    float R = 0.005f; //Support size (Option)
-
     glm::vec3 axis = bot - top;
     if (glm::length(axis) < 1e-6f) {
         // columna nula, ignorarla
@@ -135,8 +159,8 @@ void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector
     glm::vec3 right = glm::normalize(glm::cross(dir, up));
     glm::vec3 forward = glm::normalize(glm::cross(dir, right));
 
-    right *= R;
-    forward *= R;
+    right *= SupportRadius;
+    forward *= SupportRadius;
 
     //top 4 vert
     glm::vec3 t0 = top + right + forward;
