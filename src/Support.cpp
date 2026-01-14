@@ -1,5 +1,7 @@
 #include <iostream>
 #include <unordered_set>
+#include <unordered_map>
+#include <chrono>
 #include "Support.h"
 
 float SupportSpacing = 0.5f;
@@ -13,7 +15,7 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
 
     float maxAngle = glm::radians(45.0f);//what we consider an overhang
     std::unordered_set<GridKey, GridKeyHash> occupied;//to avoid multiple supports in the same "tile"
-
+    std::unordered_map<GridKey, std::vector<glm::vec3>, GridKeyHash> baseClusters;//for support base aggregation
     for (const Triangle& tri : world)//for each triangle
     {
         float angle = acos(glm::dot(glm::normalize(tri.n), glm::vec3(0, 1, 0)));
@@ -22,10 +24,20 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
 
         glm::vec3 top = (tri.A + tri.B + tri.C) / 3.0f;//Center of the triangle
 
-        GridKey key{
+        GridKey key
+        {
             int(floor(top.x / SupportSpacing)),
             int(floor(top.z / SupportSpacing))
         };
+        //if its contained, ignore it
+        auto start = std::chrono::high_resolution_clock::now();
+        if (!IsPointExposed(top, world))
+        {
+            continue;
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> diff = end - start;
+        std::cout << diff.count() << " ms" << std::endl;
 
         if (occupied.contains(key))
             continue;
@@ -34,8 +46,19 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         ProjectSinglePoint(top, world, bottom);
 
         occupied.insert(key);
-        CreateSupportBase(bottom, outSupports);
+        baseClusters[key].push_back(bottom);
         CreateSupportPillar(top, bottom, outSupports);
+
+    }
+    for (auto& [key, bots] : baseClusters)
+    {
+        glm::vec3 center(0.0f);
+        for (auto& b : bots)
+            center += b;
+
+        center /= float(bots.size());
+
+        CreateSupportBase(center, outSupports);
     }
 }
 
@@ -262,4 +285,30 @@ void CreateSupportBase(const glm::vec3& bot, std::vector<glm::vec3>& outSupports
     addTri(b2, t3, t2);
     addTri(b3, b0, t0);
     addTri(b3, t0, t3);
+}
+
+bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world)
+{
+    glm::vec3 rayOrigin = p + glm::vec3(0, 0.001f, 0);
+    glm::vec3 rayDir = glm::vec3(0, 1, 0);
+
+    for (const Triangle& tri : world)
+    {
+        //quick discard
+        if (tri.A.y < p.y && tri.B.y < p.y && tri.C.y < p.y)
+            continue;
+        //quick discard
+        if (glm::dot(tri.n, glm::vec3(0, -1, 0)) <= 0.0f)
+            continue;
+        //with these small optimizations the suzanne binary test for the first triangle went from 0.0338ms to 0.0135ms 
+        //not great not terrible
+        float t;
+        glm::vec3 hit;
+        if (RayIntersectTriangle(rayOrigin, rayDir, tri, t, hit))
+        {
+            return true;
+        }
+    }
+    return false;
+
 }
