@@ -52,7 +52,7 @@ public:
 		int m_CurrSlice = 0;
 		int m_TotSlices = -1;
 		int m_SelectedObject = 0;
-		float layerHeight = 0.1f;
+		float layerHeight = 0.01f;
 		std::vector<MeshSlice> DebugSlices;
 	} m_Config;
 };

@@ -12,11 +12,11 @@ std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, fl
         yMax = std::max({ yMax, tri.A.y, tri.B.y, tri.C.y });
     }
 
-    int numLayers = static_cast<int>((yMax - yMin) / layerHeight) + 1;
+    int numLayers = static_cast<int>(ceil((yMax - yMin) / layerHeight));
 
     for (int i = 0; i < numLayers; ++i)
     {
-        float y = yMin + i * layerHeight;
+        float y = yMin + (i + 0.5f) * layerHeight;
         std::vector<Segment> layerSegments;
 
         for (const auto& tri : model)
@@ -46,8 +46,9 @@ std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float y)
         const glm::vec3& b = verts[(i + 1) % 3];
 
         // Si la arista cruza el plano z
-        bool above = a.y >= y;
-        bool below = b.y >= y;
+        const float eps = 1e-6f;
+        bool above = a.y > y + eps;
+        bool below = b.y > y + eps;
         if (above != below)
         {
             float t = (y - a.y) / (b.y - a.y);
