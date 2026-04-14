@@ -32,6 +32,8 @@ public:
     void CalculateTransform();
 	std::vector<Triangle> m_Model;
     std::vector<glm::vec3> m_SupportVertices;
+    std::vector<Triangle> m_SupportTriangles;
+
 private:
     void ActualMove(Object&& other) noexcept;
     GLuint m_VAO = 0;

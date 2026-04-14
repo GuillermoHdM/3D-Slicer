@@ -85,11 +85,11 @@ void Editor::R_Update()
         glm::mat4 model = obj.m_Transform.modelMatrix;
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &model[0][0]);
         obj.Draw(m_Config.m_Wireframe);
-        //Supports are already computed in world space
+        /*//Supports are already computed in world space
         glUniform4f(locColor, 1.0f, 0.0f, 0.0f, 1.0f);
         glm::mat4 identity(1.0f);
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &identity[0][0]);
-        obj.DrawSupports(m_Config.m_Wireframe);
+        obj.DrawSupports(m_Config.m_Wireframe);*/
     }
     if (m_Config.m_SliceDebug)
     {                                                                          //  m_Config.m_CurrSlice      1.0f (layer heignt)
@@ -184,8 +184,11 @@ void Editor::UpdateImGui()
             float BaseHeight = 0.05f; //this parameter exists on Support.cpp, I must unify it NOW!!!
             m_Objects[m_Config.m_SelectedObject].m_Transform.position.y += BaseHeight + 0.05;
             m_Objects[m_Config.m_SelectedObject].CalculateTransform();
-            GenerateSupports(m_Objects[m_Config.m_SelectedObject].m_Model, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix, m_Objects[m_Config.m_SelectedObject].m_SupportVertices);
-            m_Objects[m_Config.m_SelectedObject].SetSupportsGL();
+            GenerateSupports(m_Objects[m_Config.m_SelectedObject].m_Model, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix, m_Objects[m_Config.m_SelectedObject].m_SupportVertices, m_Objects[m_Config.m_SelectedObject].m_SupportTriangles);
+            m_Objects[m_Config.m_SelectedObject].m_Model.insert(m_Objects[m_Config.m_SelectedObject].m_Model.end(), m_Objects[m_Config.m_SelectedObject].m_SupportTriangles.begin(), m_Objects[m_Config.m_SelectedObject].m_SupportTriangles.end());
+
+            //m_Objects[m_Config.m_SelectedObject].SetSupportsGL();
+            m_Objects[m_Config.m_SelectedObject].SetOpenGlThings();
         }
 
         ImGui::End();

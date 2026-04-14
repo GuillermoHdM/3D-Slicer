@@ -9,7 +9,7 @@ float SupportRadius = 0.02f; //Support size (Option)
 float BaseSize = 0.5f;
 float BaseHeight = 0.05f;
 
-void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports)
+void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports, std::vector<Triangle>& outSupportTriangles)
 {
     auto world = ToWorldSpace(model, TRS);//pass to world space
 
@@ -30,14 +30,10 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
             int(floor(top.z / SupportSpacing))
         };
         //if its contained, ignore it
-        auto start = std::chrono::high_resolution_clock::now();
         if (!IsPointExposed(top, world))
         {
             continue;
         }
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> diff = end - start;
-        std::cout << diff.count() << " ms" << std::endl;
 
         if (occupied.contains(key))
             continue;
@@ -59,6 +55,33 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         center /= float(bots.size());
 
         CreateSupportBase(center, outSupports);
+    }
+
+
+    for (size_t i = 0; i < outSupports.size(); i += 3)
+    {
+        if (i + 2 < outSupports.size())
+        { // Asegúrate de que hay suficientes vértices
+            Triangle supportTri;
+            supportTri.A = outSupports[i];
+            supportTri.B = outSupports[i + 2];//avoid backfaces
+            supportTri.C = outSupports[i + 1];
+            supportTri.n = glm::normalize(glm::cross(supportTri.B - supportTri.A, supportTri.C - supportTri.A)); // Calcula la normal
+            //supportTri.id = /* asigna un ID único */;
+
+            outSupportTriangles.push_back(supportTri);
+        }
+    }
+
+    glm::mat4 invTRS = glm::inverse(TRS);
+
+    for (auto& tri : outSupportTriangles)
+    {
+        tri.A = glm::vec3(invTRS * glm::vec4(tri.A, 1.0f));
+        tri.B = glm::vec3(invTRS * glm::vec4(tri.B, 1.0f));
+        tri.C = glm::vec3(invTRS * glm::vec4(tri.C, 1.0f));
+
+        tri.n = glm::normalize(glm::cross(tri.B - tri.A, tri.C - tri.A)); // recalcula normal
     }
 }
 

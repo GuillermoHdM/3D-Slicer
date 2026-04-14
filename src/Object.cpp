@@ -145,7 +145,7 @@ void Object::ActualMove(Object&& other) noexcept
 
 void Object::SetSupportsGL()
 {
-    if (m_SupportVAO == 0)
+    /*if (m_SupportVAO == 0)
         glGenVertexArrays(1, &m_SupportVAO);
     if (m_SupportVBO == 0)
         glGenBuffers(1, &m_SupportVBO);
@@ -163,5 +163,5 @@ void Object::SetSupportsGL()
         0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3),
         (void*)0);
 
-    glBindVertexArray(0);
+    glBindVertexArray(0);*/
 }

@@ -9,7 +9,7 @@ struct SupportColumn
 };
 
 
-void GenerateSupports(const std::vector<Triangle>& model,glm::mat4 TRS,std::vector<glm::vec3>& outSupportVertices);
+void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports, std::vector<Triangle>& outSupportTriangles);
 SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& worldModel);
 bool RayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const Triangle& tri, float& out_t, glm::vec3& out_hit);
 void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<glm::vec3>& outSupports);
