@@ -4,10 +4,10 @@
 #include <chrono>
 #include "Support.h"
 
-float SupportSpacing = 0.5f;
-float SupportRadius = 0.02f; //Support size (Option)
-float BaseSize = 0.5f;
-float BaseHeight = 0.05f;
+float SupportSpacing = 3.0f;
+float SupportRadius = 0.3f; //Support size (Option)
+float BaseSize = 6.0f;
+float BaseHeight = 0.6f;
 
 void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::vector<glm::vec3>& outSupports, std::vector<Triangle>& outSupportTriangles)
 {

@@ -190,7 +190,14 @@ void Editor::UpdateImGui()
             //m_Objects[m_Config.m_SelectedObject].SetSupportsGL();
             m_Objects[m_Config.m_SelectedObject].SetOpenGlThings();
         }
-
+        if (ImGui::Button("Spawn Suzanne"))
+        {
+            std::string path = "../Suzanne.stl";
+            std::vector<Triangle> triangles;
+            LoadAsciiSTL(path,triangles);
+            AddNewObject(triangles, "Suzanne");
+            m_Objects.back().SetScale(glm::vec3(12.0, 12.0, 12.0));
+        }
         ImGui::End();
     }
 }
