@@ -22,16 +22,23 @@ public:
     void SetRotation(const glm::vec3& rot);
     void SetScale(const glm::vec3& scale);
     void Draw(bool Wireframe);
+    void DrawSupports(bool Wireframe);
     //I wish I didnt have to do this, but there was a problem of copying VAOs around when 
     //adding to the vector
     void SetOpenGlThings();
+    void SetSupportsGL();
 
     std::string m_Name;
     void CalculateTransform();
 	std::vector<Triangle> m_Model;
+    std::vector<glm::vec3> m_SupportVertices;
+    std::vector<Triangle> m_SupportTriangles;
+
 private:
     void ActualMove(Object&& other) noexcept;
     GLuint m_VAO = 0;
     GLuint m_VBO = 0;
+    GLuint m_SupportVAO = 0;
+    GLuint m_SupportVBO = 0;
     GLsizei m_VertexCount = 0;
 };
