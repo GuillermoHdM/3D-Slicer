@@ -4,7 +4,7 @@
 #include <iostream>
 #include "FileLoader.h"
 #include "Object.h"
-#include "../demo/Editor.h"
+#include "Editor.h"
 
 bool IsBinary(const std::string& path)
 {

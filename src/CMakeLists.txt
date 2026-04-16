@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(cs350-lib)
+project(Slicer-lib)
 
 # Engine library
 add_library(
@@ -9,7 +9,22 @@ add_library(
     OpenGl.hpp
     OpenGl.cpp
     
-    Math.hpp            "MyImgui.cpp" "MyImgui.h"     "Shaders.h" "Grid.h" "Grid.cpp" "Shaders.cpp" "Camera.h" "Camera.cpp" "FileLoader.cpp" "FileLoader.h" "Object.h" "Object.cpp" "Slicing.cpp" "Slicing.h" "Support.cpp" "Support.h")
+    Math.hpp            
+    "MyImgui.cpp" "MyImgui.h"     
+    "Shaders.h" "Shaders.cpp"
+    "Grid.cpp" "Grid.h" 
+    "Camera.h" "Camera.cpp" 
+    "FileLoader.cpp" "FileLoader.h" 
+    "Object.h" "Object.cpp" 
+    "Slicing.cpp" "Slicing.h" 
+    "Support.cpp" "Support.h" )
+
+add_executable(Slicer
+    main.cpp
+    Editor.cpp
+    Editor.h
+)
+target_link_libraries(Slicer PUBLIC ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 ## ImGui

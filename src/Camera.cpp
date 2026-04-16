@@ -1,5 +1,5 @@
 #include "Camera.h"
-#include "../demo/Editor.h"
+#include "Editor.h"
 
 void Camera::Update(GLFWwindow* window)
 {
