@@ -181,8 +181,8 @@ void Editor::UpdateImGui()
 
         if (ImGui::Button("Generate Supports"))
         {
-            float BaseHeight = 0.05f; //this parameter exists on Support.cpp, I must unify it NOW!!!
-            m_Objects[m_Config.m_SelectedObject].m_Transform.position.y += BaseHeight + 0.05;
+            float BaseHeight = 0.6f; //this parameter exists on Support.cpp, I must unify it NOW!!!
+            m_Objects[m_Config.m_SelectedObject].m_Transform.position.y += BaseHeight + m_Config.layerHeight * 2;
             m_Objects[m_Config.m_SelectedObject].CalculateTransform();
             GenerateSupports(m_Objects[m_Config.m_SelectedObject].m_Model, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix, m_Objects[m_Config.m_SelectedObject].m_SupportVertices, m_Objects[m_Config.m_SelectedObject].m_SupportTriangles);
             m_Objects[m_Config.m_SelectedObject].m_Model.insert(m_Objects[m_Config.m_SelectedObject].m_Model.end(), m_Objects[m_Config.m_SelectedObject].m_SupportTriangles.begin(), m_Objects[m_Config.m_SelectedObject].m_SupportTriangles.end());

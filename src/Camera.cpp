@@ -41,7 +41,7 @@ void Camera::Scroll(double offset)
 {
     //REGULAR "HARSH" SCROLL
     m_Radius -= static_cast<float>(offset) * m_ZoomSpeed;
-    m_Radius = glm::clamp(m_Radius, 1.0f, 100.0f);
+    m_Radius = glm::clamp(m_Radius, 1.0f, 1000.0f);
     
     //smoother scroll
     /*

@@ -261,9 +261,18 @@ bool ProjectSinglePoint(const glm::vec3& top, const std::vector<Triangle>& world
         float dist;
         glm::vec3 hitPoint;
 
+        float minDrop = 1.0f; // ajusta según escala
+
         if (RayIntersectTriangle(top, rayDir, t, dist, hitPoint))
         {
-            if (hitPoint.y < top.y && hitPoint.y > bestY)
+            float drop = top.y - hitPoint.y;
+            if (drop < minDrop)//avoid too close collitions
+                continue;
+
+            if (glm::dot(t.n, glm::vec3(0, 1, 0)) < 0.3f)//avoid too steep surfaces
+                continue;
+
+            if (hitPoint.y > bestY)
             {
                 bestY = hitPoint.y;
                 outBottom = hitPoint;

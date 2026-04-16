@@ -13,7 +13,7 @@ class Camera
 
 	float m_RotationSpeed = 0.005f;
 	float m_ZoomSpeed = 1.0f;
-	float m_Radius = 10.0f;
+	float m_Radius = 100.0f;
 	float m_Theta = glm::radians(45.0f);//azimutal (horizontal)
 	float m_Phi = glm::radians(45.0f);//polar (vertical)
 	bool m_RightPressed = false;
