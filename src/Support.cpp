@@ -41,6 +41,11 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         glm::vec3 bottom;
         ProjectSinglePoint(top, world, bottom);
 
+
+
+        glm::vec3 axis = bottom - top;
+        if (glm::length(axis) < 1e-6f)
+            continue;
         occupied.insert(key);
         baseClusters[key].push_back(bottom);
         CreateSupportPillar(top, bottom, outSupports);
@@ -312,7 +317,7 @@ void CreateSupportBase(const glm::vec3& bot, std::vector<glm::vec3>& outSupports
 
 bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world)
 {
-    glm::vec3 rayOrigin = p + glm::vec3(0, 0.001f, 0);
+    glm::vec3 rayOrigin = p + glm::vec3(0, 0.01f, 0);
     glm::vec3 rayDir = glm::vec3(0, 1, 0);
 
     for (const Triangle& tri : world)
@@ -321,15 +326,19 @@ bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world)
         if (tri.A.y < p.y && tri.B.y < p.y && tri.C.y < p.y)
             continue;
         //quick discard
-        if (glm::dot(tri.n, glm::vec3(0, -1, 0)) <= 0.0f)
+        /*if (glm::dot(tri.n, glm::vec3(0, -1, 0)) <= 0.0f)
             continue;
+        */
         //with these small optimizations the suzanne binary test for the first triangle went from 0.0338ms to 0.0135ms 
         //not great not terrible
         float t;
         glm::vec3 hit;
         if (RayIntersectTriangle(rayOrigin, rayDir, tri, t, hit))
         {
-            return true;
+            if (t < 0.01f) 
+                continue;
+            else
+                return true;
         }
     }
     return false;
