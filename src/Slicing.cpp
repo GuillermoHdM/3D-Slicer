@@ -1,4 +1,10 @@
+#include <unordered_map>
 #include "Slicing.h"
+using EndpointMap = std::unordered_map<GridKey, std::vector<int>, GridKeyHash>;
+GridKey ToGrid(const glm::vec2& p, float tol)
+{
+    return GridKey{ (int)std::floor(p.x / tol), (int)std::floor(p.y / tol) };
+};
 
 std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, float layerHeight)
 {
@@ -47,11 +53,12 @@ std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float y)
 
         // Si la arista cruza el plano z
         const float eps = 1e-6f;
-        bool above = a.y > y + eps;
-        bool below = b.y > y + eps;
-        if (above != below)
+        float da = a.y - y;
+        float db = b.y - y;
+
+        if ((da > 0 && db < 0) || (da < 0 && db > 0))
         {
-            float t = (y - a.y) / (b.y - a.y);
+            float t = da / (da - db);
             glm::vec3 p = a + t * (b - a);
             points.push_back(glm::vec2(p.x, p.z));
         }
@@ -66,41 +73,81 @@ std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float y)
 MeshSlice ConnectSegments(const std::vector<Segment>& segments, float tol)
 {
     MeshSlice contours;
+
+    EndpointMap map;
+
+    //Give index to endpoints
+    for (int i = 0; i < (int)segments.size(); ++i)
+    {
+        map[ToGrid(segments[i].A, tol)].push_back(i);
+        map[ToGrid(segments[i].B, tol)].push_back(i);
+    }
+
     std::vector<bool> used(segments.size(), false);
 
-    for (size_t i = 0; i < segments.size(); ++i) {
+    //build the contours
+    for (int i = 0; i < (int)segments.size(); ++i)
+    {
         if (used[i]) continue;
 
         std::vector<glm::vec2> contour;
-        contour.push_back(segments[i].A);
-        contour.push_back(segments[i].B);
+
+        glm::vec2 start = segments[i].A;
+        glm::vec2 current = segments[i].B;
+
+        contour.push_back(start);
+        contour.push_back(current);
+
         used[i] = true;
 
-        bool extended = true;
-        while (extended) {
-            extended = false;
-            for (size_t j = 0; j < segments.size(); ++j) {
-                if (used[j]) continue;
-                auto& s = segments[j];
+        bool closed = false;
 
-                if (glm::length(contour.back() - s.A) < tol) {
-                    contour.push_back(s.B);
-                    used[j] = true;
-                    extended = true;
+        while (!closed)
+        {
+            GridKey key = ToGrid(current, tol);
+
+            auto it = map.find(key);
+            if (it == map.end()) break;
+
+            bool extended = false;
+
+            for (int segIdx : it->second)
+            {
+                if (used[segIdx]) continue;
+
+                const auto& s = segments[segIdx];
+
+                if (glm::length(s.A - current) < tol)
+                {
+                    current = s.B;
                 }
-                else if (glm::length(contour.back() - s.B) < tol) {
-                    contour.push_back(s.A);
-                    used[j] = true;
-                    extended = true;
+                else if (glm::length(s.B - current) < tol)
+                {
+                    current = s.A;
                 }
+                else
+                {
+                    continue;
+                }
+
+                contour.push_back(current);
+                used[segIdx] = true;
+                extended = true;
+                break;
+            }
+
+            if (!extended)
+                break;
+
+            if (glm::length(contour.front() - current) < tol)
+            {
+                contour.back() = contour.front();
+                closed = true;
             }
         }
 
-        // cerrar bucle si hace falta
-        if (glm::length(contour.front() - contour.back()) < tol)
-            contour.back() = contour.front();
-
-        contours.push_back(contour);
+        if (contour.size() > 2)
+            contours.push_back(contour);
     }
 
     return contours;
