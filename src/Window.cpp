@@ -85,7 +85,7 @@ Window::Window(ivec2 size, bool visible) {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
     glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    m_window = glfwCreateWindow(size.x, size.y, "CS300", nullptr, nullptr);
+    m_window = glfwCreateWindow(size.x, size.y, "3D Slicer", nullptr, nullptr);
     if (m_window == nullptr) {
         char const* desc = nullptr;
         int         code = glfwGetError(&desc);

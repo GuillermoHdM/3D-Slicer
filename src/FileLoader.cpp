@@ -123,6 +123,12 @@ void LoadBinarySTL(const std::string& path, std::vector<Triangle> &out_triangles
 		file.read(reinterpret_cast<char*>(&out_triangles[i].A), sizeof(glm::vec3));
 		file.read(reinterpret_cast<char*>(&out_triangles[i].B), sizeof(glm::vec3));
 		file.read(reinterpret_cast<char*>(&out_triangles[i].C), sizeof(glm::vec3));
+		out_triangles[i].n = StandarizeUpVector(out_triangles[i].n);
+		out_triangles[i].A = StandarizeUpVector(out_triangles[i].A);
+		out_triangles[i].B = StandarizeUpVector(out_triangles[i].B);
+		out_triangles[i].C = StandarizeUpVector(out_triangles[i].C);
+		std::swap(out_triangles[i].B, out_triangles[i].C);//retriangulate
+
 
 		file.ignore(2);//inore the attribute
 	}
@@ -174,13 +180,14 @@ void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles)
 		{
 			std::string normalWord;
 			ss >> normalWord >> tri.n.x >> tri.n.y >> tri.n.z;
+			tri.n = StandarizeUpVector(tri.n);
 			vertexCount = 0;
 		}
 		else if (word == "vertex")
 		{
 			glm::vec3 v;
 			ss >> v.x >> v.y >> v.z;
-
+			v = StandarizeUpVector(v);
 			if (vertexCount == 0)
 			{
 				tri.A = v;
@@ -203,6 +210,7 @@ void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles)
 			{
 				tri.n = glm::normalize(glm::cross(tri.B - tri.A, tri.C - tri.A));
 			}
+			std::swap(tri.B, tri.C);//retriangulate
 			out_triangles.push_back(tri);
 		}
 	}
@@ -251,4 +259,9 @@ std::string GetFileName(const std::string& path)
 		dotPos = path.size();
 	}
 	return path.substr(slashPos + 1, dotPos - slashPos - 1);
+}
+
+glm::vec3 StandarizeUpVector(const glm::vec3& v)
+{
+	return glm::vec3(v.x, v.z, v.y);
 }
