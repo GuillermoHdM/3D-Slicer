@@ -198,6 +198,14 @@ void Editor::UpdateImGui()
             AddNewObject(triangles, "Suzanne");
             m_Objects.back().SetScale(glm::vec3(12.0, 12.0, 12.0));
         }
+        if (ImGui::Button("Spawn Smooth Suzanne"))
+        {
+            std::string path = "../SuzanneBinary.stl";
+            std::vector<Triangle> triangles;
+            LoadBinarySTL(path, triangles);
+            AddNewObject(triangles, "Smooth Suzanne");
+            m_Objects.back().SetScale(glm::vec3(12.0, 12.0, 12.0));
+        }
         ImGui::End();
     }
 }
