@@ -75,16 +75,14 @@ void Editor::R_Update()
     GLint locModel = glGetUniformLocation(MyShader, "model");
     GLint locView = glGetUniformLocation(MyShader, "view");
     GLint locProj = glGetUniformLocation(MyShader, "projection");
-    GLint locColor = glGetUniformLocation(MyShader, "color");
     
     glUniformMatrix4fv(locView, 1, GL_FALSE, &m_Camera.m_View[0][0]);
     glUniformMatrix4fv(locProj, 1, GL_FALSE, &m_Camera.m_Projection[0][0]);
     for (auto& obj : m_Objects)
     {
-        glUniform4f(locColor, 0.9f, 0.9f, 0.9f, 1.0f);
         glm::mat4 model = obj.m_Transform.modelMatrix;
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &model[0][0]);
-        obj.Draw(m_Config.m_Wireframe);
+        obj.Draw(m_Config.m_Wireframe, MyShader);
         /*//Supports are already computed in world space
         glUniform4f(locColor, 1.0f, 0.0f, 0.0f, 1.0f);
         glm::mat4 identity(1.0f);

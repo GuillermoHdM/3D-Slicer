@@ -49,7 +49,7 @@ void Object::CalculateTransform()
 
     m_Transform.modelMatrix = T * R * S;
 }
-void Object::Draw(bool Wireframe)
+void Object::Draw(bool Wireframe, GLuint Shader)
 {
     if (Wireframe)
     {
@@ -60,7 +60,21 @@ void Object::Draw(bool Wireframe)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
     glBindVertexArray(m_VAO);
-    glDrawArrays(GL_TRIANGLES, 0, m_VertexCount);
+
+    if (m_VertexCountWithoutSupport == 0)
+    {
+        GLint locColor = glGetUniformLocation(Shader, "color");
+        glUniform4f(locColor, 0.9f, 0.9f, 0.9f, 1.0f);
+        glDrawArrays(GL_TRIANGLES, 0, m_VertexCount);
+    }
+    else
+    {
+        GLint locColor = glGetUniformLocation(Shader, "color");
+        glUniform4f(locColor, 0.9f, 0.9f, 0.9f, 1.0f);
+        glDrawArrays(GL_TRIANGLES, 0, m_VertexCountWithoutSupport);
+        glUniform4f(locColor, 1.0f, 0.0f, 0.0f, 1.0f);
+        glDrawArrays(GL_TRIANGLES, m_VertexCountWithoutSupport, m_VertexCount - m_VertexCountWithoutSupport);
+    }
     glBindVertexArray(0);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);//reset
@@ -102,8 +116,13 @@ void Object::SetOpenGlThings()
         vertices.push_back(tri.n.x); vertices.push_back(tri.n.y); vertices.push_back(tri.n.z);
 
     }
-
-    m_VertexCount = static_cast<GLsizei>(vertices.size() / 6);
+    if(m_VertexCount == 0)
+        m_VertexCount = static_cast<GLsizei>(vertices.size() / 6);
+    else
+    {
+        m_VertexCountWithoutSupport = m_VertexCount;
+        m_VertexCount = static_cast<GLsizei>(vertices.size() / 6);
+    }
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
     glBindVertexArray(m_VAO);
