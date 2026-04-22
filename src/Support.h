@@ -14,10 +14,10 @@ SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& 
 bool RayIntersectTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayDir, const Triangle& tri, float& out_t, glm::vec3& out_hit);
 void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<glm::vec3>& outSupports);
 std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm::mat4& TRS);
-bool ProjectSinglePoint(const glm::vec3& top, const std::vector<Triangle>& world, glm::vec3& outBottom);
+bool ProjectSinglePoint(const glm::vec3& top, const Triangle& tri, const std::vector<Triangle>& world, glm::vec3& outBottom);
 void CreateSupportBase(const glm::vec3& bot, std::vector<glm::vec3>& outSupports);
 bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world);
-
+bool IsPathClearDown(const glm::vec3& top, const std::vector<Triangle>& world);
 
 //to know which supports are not needed (spacing)
 struct GridKey 

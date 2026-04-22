@@ -2,6 +2,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <chrono>
+#include <algorithm>
 #include "Support.h"
 
 float SupportSpacing = 3.0f;
@@ -18,28 +19,28 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
     std::unordered_map<GridKey, std::vector<glm::vec3>, GridKeyHash> baseClusters;//for support base aggregation
     for (const Triangle& tri : world)//for each triangle
     {
-        float angle = acos(glm::dot(glm::normalize(tri.n), glm::vec3(0, 1, 0)));
-        if (angle <= maxAngle)
+        float d = glm::dot(glm::normalize(tri.n), glm::vec3(0, 1, 0));
+        bool isOverhang = d < -cos(maxAngle);
+        if (!isOverhang)
             continue;
-
         glm::vec3 top = (tri.A + tri.B + tri.C) / 3.0f;//Center of the triangle
-
+        //if its contained, ignore it
+        //if (!IsPointExposed(top, world))
+        //{
+        //    continue;
+        //}
         GridKey key
         {
             int(floor(top.x / SupportSpacing)),
             int(floor(top.z / SupportSpacing))
         };
-        //if its contained, ignore it
-        if (!IsPointExposed(top, world))
-        {
-            continue;
-        }
 
         if (occupied.contains(key))
             continue;
-
+        //if (!IsPathClearDown(top, world))
+        //    continue;
         glm::vec3 bottom;
-        ProjectSinglePoint(top, world, bottom);
+        ProjectSinglePoint(top, tri, world, bottom);
 
 
 
@@ -48,6 +49,10 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
             continue;
         occupied.insert(key);
         baseClusters[key].push_back(bottom);
+        std::cout << "Accepted support" << std::endl;
+        std::cout << "Candidate at y: " << top.y << std::endl;
+        std::cout << "tri normal d = " << d << std::endl;
+
         CreateSupportPillar(top, bottom, outSupports);
 
     }
@@ -239,7 +244,8 @@ std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm
         t.A = glm::vec3(TRS * glm::vec4(tri.A, 1.0f));
         t.B = glm::vec3(TRS * glm::vec4(tri.B, 1.0f));
         t.C = glm::vec3(TRS * glm::vec4(tri.C, 1.0f));
-        t.n = glm::normalize(glm::mat3(TRS) * tri.n);
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(TRS)));
+        t.n = glm::normalize(normalMatrix * tri.n);
         t.id = tri.id;   // preserve the ID
 
         world.push_back(t);
@@ -250,7 +256,7 @@ std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm
 
 
 
-bool ProjectSinglePoint(const glm::vec3& top, const std::vector<Triangle>& world, glm::vec3& outBottom)
+bool ProjectSinglePoint(const glm::vec3& top, const Triangle& tri, const std::vector<Triangle>& world, glm::vec3& outBottom)
 {
     glm::vec3 rayDir(0, -1, 0);
     float bestY = -FLT_MAX;
@@ -258,12 +264,14 @@ bool ProjectSinglePoint(const glm::vec3& top, const std::vector<Triangle>& world
 
     for (const Triangle& t : world)
     {
+        if (tri.id == t.id)
+            continue;
         float dist;
         glm::vec3 hitPoint;
 
-        float minDrop = 1.0f; // ajusta según escala
-
-        if (RayIntersectTriangle(top, rayDir, t, dist, hitPoint))
+        float minDrop = 0.0f; // ajusta según escala
+        glm::vec3 origin = top + glm::vec3(0, -0.01f, 0);
+        if (RayIntersectTriangle(origin, rayDir, t, dist, hitPoint))
         {
             float drop = top.y - hitPoint.y;
             if (drop < minDrop)//avoid too close collitions
@@ -344,12 +352,47 @@ bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world)
         glm::vec3 hit;
         if (RayIntersectTriangle(rayOrigin, rayDir, tri, t, hit))
         {
-            if (t < 0.01f) 
-                continue;
-            else
-                return true;
+            if (t > 0.01f) 
+                return false;
         }
     }
-    return false;
+    return true;
 
+}
+
+
+bool IsPathClearDown(const glm::vec3& top, const std::vector<Triangle>& world)
+{
+    glm::vec3 origin = top + glm::vec3(0, -0.01f, 0);
+    glm::vec3 dir(0, -1, 0);
+
+    std::vector<float> hits;
+
+    for (const Triangle& t : world)
+    {
+        float tHit;
+        glm::vec3 hit;
+
+        if (RayIntersectTriangle(origin, dir, t, tHit, hit))
+        {
+            if (tHit > 0.0f)
+                hits.push_back(tHit);
+        }
+    }
+
+    if (hits.empty())
+        return true;
+
+    std::sort(hits.begin(), hits.end());
+
+    // colapsar hits muy cercanos (misma superficie)
+    const float EPS = 0.01f;
+    int surfaceCount = 1;
+
+    for (size_t i = 1; i < hits.size(); ++i)
+    {
+        if (fabs(hits[i] - hits[i - 1]) > EPS)
+            surfaceCount++;
+    }
+    return surfaceCount <= 2;
 }
