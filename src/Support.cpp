@@ -177,6 +177,8 @@ bool RayIntersectTriangle(const glm::vec3& rayOrigin,const glm::vec3& rayDir,con
 
 void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<glm::vec3>& outSupports)
 {
+    //if support prisms
+    /*
     glm::vec3 axis = bot - top;
     if (glm::length(axis) < 1e-6f) {
         // columna nula, ignorarla
@@ -231,6 +233,91 @@ void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector
     addTri(t2, b3, t3);
     addTri(t3, b3, b0);
     addTri(t3, b0, t0);
+    */
+    glm::vec3 axis = bot - top;
+    if (glm::length(axis) < 1e-6f) return;
+
+    glm::vec3 dir = glm::normalize(axis);
+
+    //Local system
+    glm::vec3 up = fabs(dir.y) > 0.99f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+    glm::vec3 right = glm::normalize(glm::cross(dir, up));
+    glm::vec3 forward = glm::normalize(glm::cross(dir, right));
+
+    int segments = 12;
+    float radius = SupportRadius;
+
+    //tip parameters
+    float tipHeight = 1.0f;
+    float tipRadius = radius * 0.3f;
+    float midRadius = (radius + tipRadius) * 0.5f;
+    float midHeight = tipHeight * 0.5f;
+
+    glm::vec3 tip = top;
+    glm::vec3 newTop = top + dir * tipHeight;
+    glm::vec3 midCenter = top + dir * midHeight;
+
+    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C)
+        {
+            outSupports.push_back(A);
+            outSupports.push_back(B);
+            outSupports.push_back(C);
+        };
+
+    //cylinder
+    for (int i = 0; i < segments; ++i)
+    {
+        float a0 = (i / (float)segments) * 2.0f * glm::pi<float>();
+        float a1 = ((i + 1) / (float)segments) * 2.0f * glm::pi<float>();
+
+        glm::vec3 off0 = cos(a0) * right * radius + sin(a0) * forward * radius;
+        glm::vec3 off1 = cos(a1) * right * radius + sin(a1) * forward * radius;
+
+        glm::vec3 t0 = newTop + off0;
+        glm::vec3 t1 = newTop + off1;
+        glm::vec3 b0 = bot + off0;
+        glm::vec3 b1 = bot + off1;
+
+        addTri(t0, b0, t1);
+        addTri(t1, b0, b1);
+    }
+
+    //transition
+    for (int i = 0; i < segments; ++i)
+    {
+        float a0 = (i / (float)segments) * 2.0f * glm::pi<float>();
+        float a1 = ((i + 1) / (float)segments) * 2.0f * glm::pi<float>();
+
+        glm::vec3 offBig0 = cos(a0) * right * radius + sin(a0) * forward * radius;
+        glm::vec3 offBig1 = cos(a1) * right * radius + sin(a1) * forward * radius;
+
+        glm::vec3 offMid0 = cos(a0) * right * midRadius + sin(a0) * forward * midRadius;
+        glm::vec3 offMid1 = cos(a1) * right * midRadius + sin(a1) * forward * midRadius;
+
+        glm::vec3 big0 = newTop + offBig0;
+        glm::vec3 big1 = newTop + offBig1;
+
+        glm::vec3 mid0 = midCenter + offMid0;
+        glm::vec3 mid1 = midCenter + offMid1;
+
+        addTri(big0, big1, mid0);
+        addTri(big1, mid1, mid0);
+    }
+
+    //cone tip
+    for (int i = 0; i < segments; ++i)
+    {
+        float a0 = (i / (float)segments) * 2.0f * glm::pi<float>();
+        float a1 = ((i + 1) / (float)segments) * 2.0f * glm::pi<float>();
+
+        glm::vec3 offMid0 = cos(a0) * right * midRadius + sin(a0) * forward * midRadius;
+        glm::vec3 offMid1 = cos(a1) * right * midRadius + sin(a1) * forward * midRadius;
+
+        glm::vec3 p0 = midCenter + offMid0;
+        glm::vec3 p1 = midCenter + offMid1;
+
+        addTri(p0, p1, tip);
+    }
 }
 
 std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm::mat4& TRS)
