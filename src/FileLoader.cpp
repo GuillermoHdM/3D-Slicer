@@ -76,7 +76,6 @@ void DropCallback(GLFWwindow* window, int count, const char** paths)
 				std::cout << "ASCII" << std::endl;
 				LoadAsciiSTL(path, triangles);
 			}
-			SetIDs(triangles);
 			editor->AddNewObject(triangles, FileNames[i]);
 
 		}
@@ -159,6 +158,8 @@ void LoadBinarySTL(const std::string& path, std::vector<Triangle> &out_triangles
 		tri.B -= offset;
 		tri.C -= offset;
 	}
+
+	SetIDs(out_triangles);
 }
 
 
@@ -242,6 +243,9 @@ void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles)
 		tri.B -= offset;
 		tri.C -= offset;
 	}
+
+	SetIDs(out_triangles);
+
 }
 
 
