@@ -23,33 +23,41 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         bool isOverhang = d < -cos(maxAngle);
         if (!isOverhang)
             continue;
-        glm::vec3 top = (tri.A + tri.B + tri.C) / 3.0f;//Center of the triangle
-
-        GridKey key
+        float area = glm::length(glm::cross(tri.B - tri.A, tri.C - tri.A)) * 0.5f;
+        int steps = std::max(1, int(std::ceil(std::sqrt(area) / SupportSpacing)));
+        for (int i = 0; i <= steps; ++i)
         {
-            int(floor(top.x / SupportSpacing)),
-            int(floor(top.z / SupportSpacing))
-        };
+            for (int j = 0; i + j <= steps; ++j)
+            {
+                float u = (float)i / steps;
+                float v = (float)j / steps;
+                float w = 1.0f - u - v;
+                glm::vec3 top = u * tri.A + v * tri.B + w * tri.C;
 
-        if (occupied.contains(key))
-            continue;
-        if (!IsPathClearDown(top, world))
-            continue;
-        glm::vec3 bottom;
-        ProjectSinglePoint(top, tri, world, bottom);
+                GridKey key
+                {
+                    int(floor(top.x / SupportSpacing)),
+                    int(floor(top.z / SupportSpacing))
+                };
 
+                if (occupied.contains(key))
+                    continue;
+                if (!IsPathClearDown(top, tri.id,world))
+                    continue;
 
+                glm::vec3 bottom;
+                ProjectSinglePoint(top, tri, world, bottom);
 
-        glm::vec3 axis = bottom - top;
-        if (glm::length(axis) < 1e-6f)
-            continue;
-        occupied.insert(key);
-        baseClusters[key].push_back(bottom);
-        std::cout << "Accepted support" << std::endl;
-        std::cout << "Candidate at y: " << top.y << std::endl;
-        std::cout << "tri normal d = " << d << std::endl;
+                glm::vec3 axis = bottom - top;
+                if (glm::length(axis) < 1e-6f)
+                    continue;
 
-        CreateSupportPillar(top, bottom, outSupports);
+                occupied.insert(key);
+                baseClusters[key].push_back(bottom);
+
+                CreateSupportPillar(top, bottom, outSupports);
+            }
+        }
 
     }
     for (auto& [key, bots] : baseClusters)
@@ -385,7 +393,7 @@ bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world)
 }
 
 
-bool IsPathClearDown(const glm::vec3& top, const std::vector<Triangle>& world)
+bool IsPathClearDown(const glm::vec3& top, int CurrId,const std::vector<Triangle>& world)
 {
     const float EPS = 0.001f;
 
@@ -394,12 +402,14 @@ bool IsPathClearDown(const glm::vec3& top, const std::vector<Triangle>& world)
 
     for (const Triangle& tri : world)
     {
+        if (tri.id == CurrId)//ensure no self collition
+            continue;
         float tHit;
         glm::vec3 hit;
 
         if (RayIntersectTriangle(origin, dir, tri, tHit, hit))
         {
-            if (tHit > EPS)
+            if (tHit > EPS && glm::dot(tri.n, glm::vec3(0, 1, 0)) > 0.3f)
                 return false;
         }
     }

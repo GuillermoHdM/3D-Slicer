@@ -13,3 +13,4 @@ void LoadBinarySTL(const std::string& path, std::vector<Triangle>& out_triangles
 void LoadAsciiSTL(const std::string& path, std::vector<Triangle>& out_triangles);
 std::string GetFileName(const std::string& path);
 glm::vec3 StandarizeUpVector(const glm::vec3& v);
+void SetIDs(std::vector<Triangle>& out_triangles);

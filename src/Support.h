@@ -17,15 +17,15 @@ std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm
 bool ProjectSinglePoint(const glm::vec3& top, const Triangle& tri, const std::vector<Triangle>& world, glm::vec3& outBottom);
 void CreateSupportBase(const glm::vec3& bot, std::vector<glm::vec3>& outSupports);
 bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world);
-bool IsPathClearDown(const glm::vec3& top, const std::vector<Triangle>& world);
+bool IsPathClearDown(const glm::vec3& top, int CurrId,const std::vector<Triangle>& world);
 
 //to know which supports are not needed (spacing)
 struct GridKey 
 {
     int x;
-    int y;
+    int z;
     bool operator==(const GridKey& other) const {
-        return x == other.x && y == other.y;
+        return x == other.x && z == other.z;
     }
 };
 //actually to know where in the "grid are they"
@@ -33,6 +33,9 @@ struct GridKeyHash
 {
     size_t operator()(const GridKey& k) const 
     {
-        return std::hash<int>()(k.x) ^ (std::hash<int>()(k.y) << 1);
+        size_t h1 = std::hash<int>()(k.x);
+        size_t h2 = std::hash<int>()(k.z);
+        //Algorithm with negative values
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
     }
 };

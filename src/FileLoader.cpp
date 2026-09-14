@@ -76,7 +76,9 @@ void DropCallback(GLFWwindow* window, int count, const char** paths)
 				std::cout << "ASCII" << std::endl;
 				LoadAsciiSTL(path, triangles);
 			}
+			SetIDs(triangles);
 			editor->AddNewObject(triangles, FileNames[i]);
+
 		}
 		else 
 		{
@@ -264,4 +266,12 @@ std::string GetFileName(const std::string& path)
 glm::vec3 StandarizeUpVector(const glm::vec3& v)
 {
 	return glm::vec3(v.x, v.z, v.y);
+}
+
+void SetIDs(std::vector<Triangle>& out_triangles)
+{
+	for (size_t i = 0; i < out_triangles.size(); i++)
+	{
+		out_triangles[i].id = static_cast<int>(i);
+	}
 }
