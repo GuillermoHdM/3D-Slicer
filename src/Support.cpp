@@ -24,11 +24,7 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         if (!isOverhang)
             continue;
         glm::vec3 top = (tri.A + tri.B + tri.C) / 3.0f;//Center of the triangle
-        //if its contained, ignore it
-        //if (!IsPointExposed(top, world))
-        //{
-        //    continue;
-        //}
+
         GridKey key
         {
             int(floor(top.x / SupportSpacing)),
@@ -37,8 +33,8 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
 
         if (occupied.contains(key))
             continue;
-        //if (!IsPathClearDown(top, world))
-        //    continue;
+        if (!IsPathClearDown(top, world))
+            continue;
         glm::vec3 bottom;
         ProjectSinglePoint(top, tri, world, bottom);
 
@@ -66,8 +62,6 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
 
         CreateSupportBase(center, outSupports);
     }
-
-
     for (size_t i = 0; i < outSupports.size(); i += 3)
     {
         if (i + 2 < outSupports.size())
@@ -177,63 +171,6 @@ bool RayIntersectTriangle(const glm::vec3& rayOrigin,const glm::vec3& rayDir,con
 
 void CreateSupportPillar(const glm::vec3& top, const glm::vec3& bot, std::vector<glm::vec3>& outSupports)
 {
-    //if support prisms
-    /*
-    glm::vec3 axis = bot - top;
-    if (glm::length(axis) < 1e-6f) {
-        // columna nula, ignorarla
-        return;
-    }
-
-    glm::vec3 dir = glm::normalize(axis);
-
-    // si dir es paralelo a Y, usa otro up artificial
-    glm::vec3 up = fabs(dir.y) > 0.99f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
-
-    glm::vec3 right = glm::normalize(glm::cross(dir, up));
-    glm::vec3 forward = glm::normalize(glm::cross(dir, right));
-
-    right *= SupportRadius;
-    forward *= SupportRadius;
-
-    //top 4 vert
-    glm::vec3 t0 = top + right + forward;
-    glm::vec3 t1 = top - right + forward;
-    glm::vec3 t2 = top - right - forward;
-    glm::vec3 t3 = top + right - forward;
-
-    //bot 4 vert
-    glm::vec3 b0 = bot + right + forward;
-    glm::vec3 b1 = bot - right + forward;
-    glm::vec3 b2 = bot - right - forward;
-    glm::vec3 b3 = bot + right - forward;
-
-    
-    //Generate 12 triangles
-    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C)
-    {
-        outSupports.push_back(A);
-        outSupports.push_back(B);
-        outSupports.push_back(C);
-    };
-
-    //Top Face
-    addTri(t0, t1, t2);
-    addTri(t0, t2, t3);
-
-    //Bot face
-    addTri(b0, b2, b1);
-    addTri(b0, b3, b2);
-    //Sides
-    addTri(t0, b0, b1);
-    addTri(t0, b1, t1);
-    addTri(t1, b1, b2);
-    addTri(t1, b2, t2);
-    addTri(t2, b2, b3);
-    addTri(t2, b3, t3);
-    addTri(t3, b3, b0);
-    addTri(t3, b0, t0);
-    */
     glm::vec3 axis = bot - top;
     if (glm::length(axis) < 1e-6f) return;
 
@@ -430,9 +367,9 @@ bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world)
         if (tri.A.y < p.y && tri.B.y < p.y && tri.C.y < p.y)
             continue;
         //quick discard
-        /*if (glm::dot(tri.n, glm::vec3(0, -1, 0)) <= 0.0f)
+        if (glm::dot(tri.n, glm::vec3(0, -1, 0)) <= 0.0f)
             continue;
-        */
+        
         //with these small optimizations the suzanne binary test for the first triangle went from 0.0338ms to 0.0135ms 
         //not great not terrible
         float t;
@@ -450,36 +387,22 @@ bool IsPointExposed(const glm::vec3& p, const std::vector<Triangle>& world)
 
 bool IsPathClearDown(const glm::vec3& top, const std::vector<Triangle>& world)
 {
-    glm::vec3 origin = top + glm::vec3(0, -0.01f, 0);
+    const float EPS = 0.001f;
+
+    glm::vec3 origin = top + glm::vec3(0, -EPS, 0);
     glm::vec3 dir(0, -1, 0);
 
-    std::vector<float> hits;
-
-    for (const Triangle& t : world)
+    for (const Triangle& tri : world)
     {
         float tHit;
         glm::vec3 hit;
 
-        if (RayIntersectTriangle(origin, dir, t, tHit, hit))
+        if (RayIntersectTriangle(origin, dir, tri, tHit, hit))
         {
-            if (tHit > 0.0f)
-                hits.push_back(tHit);
+            if (tHit > EPS)
+                return false;
         }
     }
 
-    if (hits.empty())
-        return true;
-
-    std::sort(hits.begin(), hits.end());
-
-    // colapsar hits muy cercanos (misma superficie)
-    const float EPS = 0.01f;
-    int surfaceCount = 1;
-
-    for (size_t i = 1; i < hits.size(); ++i)
-    {
-        if (fabs(hits[i] - hits[i - 1]) > EPS)
-            surfaceCount++;
-    }
-    return surfaceCount <= 2;
+    return true;
 }

@@ -17,6 +17,8 @@ class Camera
 	float m_Theta = glm::radians(45.0f);//azimutal (horizontal)
 	float m_Phi = glm::radians(45.0f);//polar (vertical)
 	bool m_RightPressed = false;
+	bool m_MiddlePressed = false;
+	float m_PanSpeed = 0.001f;
 public:
 
 	glm::mat4 m_View;
