@@ -57,7 +57,6 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
                     occupied.insert(key);
                     baseClusters[key].push_back(bottom);
                 }
-
                 CreateSupportPillar(top, bodyTop, bottom, outSupports);
             }
         }
@@ -68,22 +67,18 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         glm::vec3 center(0.0f);
         for (auto& b : bots)
             center += b;
-
         center /= float(bots.size());
-
         CreateSupportBase(center, outSupports);
     }
     for (size_t i = 0; i < outSupports.size(); i += 3)
     {
-        if (i + 2 < outSupports.size())
-        { // Asegúrate de que hay suficientes vértices
+        if (i + 2 < outSupports.size())//enough vertices
+        {
             Triangle supportTri;
             supportTri.A = outSupports[i];
-            supportTri.B = outSupports[i + 2];//avoid backfaces
+            supportTri.B = outSupports[i + 2];//avoid backfaces!
             supportTri.C = outSupports[i + 1];
-            supportTri.n = glm::normalize(glm::cross(supportTri.B - supportTri.A, supportTri.C - supportTri.A)); // Calcula la normal
-            //supportTri.id = /* asigna un ID único */;
-
+            supportTri.n = glm::normalize(glm::cross(supportTri.B - supportTri.A, supportTri.C - supportTri.A));//calculate the normal
             outSupportTriangles.push_back(supportTri);
         }
     }
@@ -95,7 +90,6 @@ void GenerateSupports(const std::vector<Triangle>& model, glm::mat4 TRS, std::ve
         tri.A = glm::vec3(invTRS * glm::vec4(tri.A, 1.0f));
         tri.B = glm::vec3(invTRS * glm::vec4(tri.B, 1.0f));
         tri.C = glm::vec3(invTRS * glm::vec4(tri.C, 1.0f));
-
         tri.n = glm::normalize(glm::cross(tri.B - tri.A, tri.C - tri.A)); // recalcula normal
     }
 }
@@ -127,7 +121,8 @@ SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& 
 
             if (RayIntersectTriangle(rayOrigin, rayDir, other, t, hit))
             {
-                if (glm::any(glm::isnan(hit))) {
+                if (glm::any(glm::isnan(hit))) 
+                {
                     std::cout << "NaN on hit!!!\n";
                 }
                 if (hit.y < v.y && hit.y > highestY)
@@ -140,7 +135,8 @@ SupportColumn ProjectTriangle(const Triangle& tri, const std::vector<Triangle>& 
 
         col.Top.push_back(v);
         col.Bot.push_back(bestHit);
-        if (glm::any(glm::isnan(bestHit))) {
+        if (glm::any(glm::isnan(bestHit))) 
+        {
             std::cout << "NaN on bestHit!!!\n";
         }
     }
@@ -173,7 +169,7 @@ bool RayIntersectTriangle(const glm::vec3& rayOrigin,const glm::vec3& rayDir,con
 
     float t = glm::dot(e2, q) * invDet;
     if (t < 0.0f)
-        return false; // hit is behind ray origin
+        return false;//hit is behind ray origin
 
     out_t = t;
     out_hit = rayOrigin + rayDir * t;
@@ -188,7 +184,7 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
     int segments = 12;
     float radius = SupportRadius;
 
-    // 1. Calcular dirección horizontal de salida
+    //Get the initial direction (from the mesh point)
     glm::vec3 horizDir = glm::vec3(bodyTop.x - contactTop.x, 0.0f, bodyTop.z - contactTop.z);
     float offsetDist = glm::length(horizDir);
 
@@ -199,17 +195,18 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
         horizDir = glm::vec3(1, 0, 0);
     }
 
-    // Amplitud de la cabeza
+    //Size of the support top
     float dropY = std::min(offsetDist * 1.8f, totalHeight * 0.45f);
     float actualOffset = std::min(offsetDist, dropY);
 
-    // 2. Puntos de Control Bézier
+    //Bezier control points (in case we want more curve on supports (trees))
     glm::vec3 P0 = contactTop;
     glm::vec3 P1 = contactTop + horizDir * actualOffset - glm::vec3(0, dropY * 0.6f, 0);
     glm::vec3 P2 = contactTop + horizDir * actualOffset - glm::vec3(0, dropY, 0);
     glm::vec3 PBot = glm::vec3(P2.x, bot.y, P2.z);
 
-    struct Node {
+    struct Node 
+    {
         glm::vec3 center;
         float radius;
         glm::vec3 dir;
@@ -217,7 +214,7 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
 
     std::vector<Node> nodes;
 
-    // 3. Muestreo de la curva Bézier
+    //sample curve
     int numCurveSamples = 6;
     for (int i = 0; i <= numCurveSamples; ++i)
     {
@@ -237,21 +234,21 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
         nodes.push_back({ pos, nodeRadius, dir });
     }
 
-    // Nodo final en el suelo
+    //final node (vertical)
     glm::vec3 vertDir = glm::vec3(0, -1, 0);
     nodes.push_back({ PBot, radius, vertDir });
 
-    // --- GENERACIÓN DE ANILLOS SIN TORSIÓN (Parallel Transport Frame) ---
 
-    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C) {
+    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C) 
+    {
         outSupports.push_back(A);
         outSupports.push_back(B);
         outSupports.push_back(C);
-        };
+    };
 
-    std::vector<std::vector<glm::vec3>> rings;
+    std::vector<std::vector<glm::vec3>> rings;//rings of connection
 
-    // Inicialización del primer marco de referencia
+    //First reference frame
     glm::vec3 prevDir = nodes[0].dir;
     glm::vec3 initialUp = fabs(prevDir.y) > 0.99f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
     glm::vec3 right = glm::normalize(glm::cross(prevDir, initialUp));
@@ -263,7 +260,7 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
 
         if (n > 0)
         {
-            // Rotar 'right' y 'forward' de forma continua siguiendo la nueva dirección (Sin saltos de eje)
+            //rotate right and forward to follow the curve
             glm::vec3 curDir = node.dir;
             glm::vec3 axis = glm::cross(prevDir, curDir);
             float angle = glm::length(axis);
@@ -281,7 +278,7 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
             prevDir = curDir;
         }
 
-        // Crear el anillo perfectamente orientado con su nodo anterior
+        //create the ring
         std::vector<glm::vec3> ring;
         for (int i = 0; i < segments; ++i)
         {
@@ -292,7 +289,7 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
         rings.push_back(ring);
     }
 
-    // Conexión limpia de anillos
+    //connect the rings
     for (size_t r = 0; r < rings.size() - 1; ++r)
     {
         const auto& ringA = rings[r];
@@ -326,7 +323,7 @@ std::vector<Triangle> ToWorldSpace(const std::vector<Triangle>& model, const glm
         t.C = glm::vec3(TRS * glm::vec4(tri.C, 1.0f));
         glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(TRS)));
         t.n = glm::normalize(normalMatrix * tri.n);
-        t.id = tri.id;   // preserve the ID
+        t.id = tri.id;// preserve the ID
 
         world.push_back(t);
     }
@@ -340,21 +337,22 @@ bool ProjectSinglePoint(const glm::vec3& top, const glm::vec3& normal, int CurrI
 {
     glm::vec3 rayDir(0, -1, 0);
 
-    // 1. Extraemos la dirección 'hacia afuera' en el plano XZ usando la normal
+    //Push outwards through the normal
     glm::vec3 outwardDir = glm::vec3(normal.x, 0.0f, normal.z);
-    if (glm::length(outwardDir) > 1e-4f) {
+    if (glm::length(outwardDir) > 1e-4f) 
+    {
         outwardDir = glm::normalize(outwardDir);
     }
-    else {
-        outwardDir = glm::vec3(1, 0, 0); // Fallback si la normal es totalmente vertical
+    else//in case its completly vertical
+    {
+        outwardDir = glm::vec3(1, 0, 0);
     }
 
-    // 2. Calculamos un desplazamiento de seguridad para despejar el radio del soporte
-    // Movemos el eje del pilar 'SupportRadius + margen' hacia afuera
+    //clear the radius of the support
     float safetyMargin = supportRadius * 1.5f;
     glm::vec3 offsetTop = top + outwardDir * safetyMargin;
 
-    // 3. Trazamos el rayo vertical desde la posición desplazada hacia abajo
+    //proyect down
     glm::vec3 origin = offsetTop + normal * 0.02f;
     float bestY = -FLT_MAX;
     bool hit = false;
@@ -362,15 +360,18 @@ bool ProjectSinglePoint(const glm::vec3& top, const glm::vec3& normal, int CurrI
 
     for (const Triangle& t : world)
     {
-        if (t.id == CurrId) continue;
+        if (t.id == CurrId) 
+            continue;
 
         float dist;
         glm::vec3 hitPoint;
-        if (RayIntersectTriangle(origin, rayDir, t, dist, hitPoint))
+        if (RayIntersectTriangle(origin, rayDir, t, dist, hitPoint))//if collition with mesh
         {
             float drop = offsetTop.y - hitPoint.y;
-            if (drop < minPillarHeight) continue;
-            if (glm::dot(t.n, glm::vec3(0, 1, 0)) < 0.3f) continue;
+            if (drop < minPillarHeight) 
+                continue;
+            if (glm::dot(t.n, glm::vec3(0, 1, 0)) < 0.3f) 
+                continue;
 
             if (hitPoint.y > bestY)
             {
@@ -381,9 +382,9 @@ bool ProjectSinglePoint(const glm::vec3& top, const glm::vec3& normal, int CurrI
         }
     }
     if (!hit)
-        outBottom = glm::vec3(offsetTop.x, 0.0f, offsetTop.z); // Cama de impresión
+        outBottom = glm::vec3(offsetTop.x, 0.0f, offsetTop.z); //reach the bed
 
-    // Devolvemos la posición ajustada del 'top' desde la que bajará el pilar vertical
+    //readjust the top
     outAdjustedTop = offsetTop;
     return true;
 }
@@ -470,10 +471,10 @@ bool IsPathClearDown(const glm::vec3& top, int CurrId,const std::vector<Triangle
         if (RayIntersectTriangle(origin, dir, t, tHit, hit))
         {
             float drop = top.y - hit.y;
-            // Si choca con una cara que mira hacia arriba a una distancia real
+            //if collition with upwards facing face
             if (drop > minClearance && glm::dot(t.n, glm::vec3(0, 1, 0)) > 0.3f)
             {
-                return false; // Obstáculo real en el camino
+                return false;//path obstructed
             }
         }
     }
