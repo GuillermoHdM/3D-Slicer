@@ -31,6 +31,12 @@ class Editor
 
 	GLuint SliceDebuTex;
 	GLuint SliceDebugFBO;
+
+	GLuint SliceDebugRBO = 0;
+	GLuint SliceContourVAO = 0;
+	GLuint SliceContourVBO = 0;
+	GLuint BedQuadVAO = 0;
+	GLuint BedQuadVBO = 0;
 	//^^^^^^^^^^^^^^^^^
 	Grid m_Grid;
 	std::vector<Object> m_Objects;
@@ -53,6 +59,8 @@ public:
 		int m_TotSlices = -1;
 		int m_SelectedObject = 0;
 		float layerHeight = 0.01f;
+		float m_bedWidth = 220.0f;
+		float m_bedDepth = 220.0f;
 		std::vector<MeshSlice> DebugSlices;
 	} m_Config;
 };

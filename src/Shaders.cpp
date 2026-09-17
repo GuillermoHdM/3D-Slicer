@@ -87,11 +87,11 @@ const char* GridFragShader = R"(
 
 const char* SliceVtxShader = R"(
 	#version 330 core
-	layout (location = 0) in vec3 aPos;
+	layout (location = 0) in vec2 aPos; // <-- Cambiado a vec2
 	uniform mat4 u_MVP;
 	void main() {
-	    gl_Position = u_MVP * vec4(aPos, 1.0);
-	}
+    gl_Position = u_MVP * vec4(aPos, 0.0, 1.0); // Z pasa como 0.0
+}
 	)";
 
 const char* SliceFragShader = R"(

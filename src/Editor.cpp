@@ -21,14 +21,17 @@ Editor::~Editor()
 }
 void Editor::R_Init()
 {
+    // =========================================================================
+    // 1. SHADERS (SE CONSERVA TODO)
+    // =========================================================================
     VtxShader = CreateProgram(GL_VERTEX_SHADER, MyVertShader);
     FragShader = CreateProgram(GL_FRAGMENT_SHADER, MyFragShader);
     MyShader = glCreateProgram();
     glAttachShader(MyShader, VtxShader);
     glAttachShader(MyShader, FragShader);
     glLinkProgram(MyShader);
-    
-    //Debug Slice vvvv
+
+    // Shader para renderizar los Slices 2D
     SlicesVtxShader = CreateProgram(GL_VERTEX_SHADER, SliceVtxShader);
     SlicesFragShader = CreateProgram(GL_FRAGMENT_SHADER, SliceFragShader);
     SlicesShader = glCreateProgram();
@@ -36,17 +39,57 @@ void Editor::R_Init()
     glAttachShader(SlicesShader, SlicesFragShader);
     glLinkProgram(SlicesShader);
 
+    // =========================================================================
+    // 2. FRAMEBUFFER DE DEPURACIÓN DE SLICES (MODIFICADO / AMPLIADO)
+    // =========================================================================
     glGenTextures(1, &SliceDebuTex);
     glBindTexture(GL_TEXTURE_2D, SliceDebuTex);
-    //                                        w     h
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // CAMBIO MENOR: Cambiar a GL_NEAREST para evitar bordes borrosos al crear la máscara de píxeles
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
     glGenFramebuffers(1, &SliceDebugFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, SliceDebugFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SliceDebuTex, 0);
+
+    // [NUEVO]: Adjuntar el Renderbuffer de Stencil para que funcionen las pasadas Par-Impar
+    glGenRenderbuffers(1, &SliceDebugRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, SliceDebugRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 512, 512);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, SliceDebugRBO);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cout << "Error: SliceDebugFBO no está completo!" << std::endl;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    //^^^^^^^^^^^^^^^^
+
+    // =========================================================================
+    // 3. GEOMETRÍA DEDICADA A SLICES (NUEVO)
+    // =========================================================================
+    // VAO/VBO para subir las líneas/polígonos de los contornos en tiempo real
+    glGenVertexArrays(1, &SliceContourVAO);
+    glGenBuffers(1, &SliceContourVBO);
+    glBindVertexArray(SliceContourVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, SliceContourVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+
+    // VAO/VBO para el lienzo/rectángulo de la cama (BedQuad)
+    glGenVertexArrays(1, &BedQuadVAO);
+    glGenBuffers(1, &BedQuadVBO);
+    glBindVertexArray(BedQuadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, BedQuadVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+
+    glBindVertexArray(0); // Desenlazar
+
+    // =========================================================================
+    // 4. ESTADO GLOBAL DE OPENGL PARA EL VISOR 3D (SE CONSERVA TODO)
+    // =========================================================================
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
@@ -54,7 +97,6 @@ void Editor::R_Init()
     glDepthFunc(GL_LESS);
 
     glClearColor(0.00f, 0.0f, 0.0f, 0.0f);
-
 }
 void Editor::R_Update()
 {
@@ -83,11 +125,6 @@ void Editor::R_Update()
         glm::mat4 model = obj.m_Transform.modelMatrix;
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &model[0][0]);
         obj.Draw(m_Config.m_Wireframe, MyShader);
-        /*//Supports are already computed in world space
-        glUniform4f(locColor, 1.0f, 0.0f, 0.0f, 1.0f);
-        glm::mat4 identity(1.0f);
-        glUniformMatrix4fv(locModel, 1, GL_FALSE, &identity[0][0]);
-        obj.DrawSupports(m_Config.m_Wireframe);*/
     }
     if (m_Config.m_SliceDebug)
     {                                                                          //  m_Config.m_CurrSlice      1.0f (layer heignt)
@@ -160,7 +197,7 @@ void Editor::UpdateImGui()
             ImGui::SameLine();
             ImGui::Text("Layer %d / %d", m_Config.m_CurrSlice + 1, (int)m_Config.DebugSlices.size());
 
-            ImGui::Image((ImTextureID)(intptr_t)SliceDebuTex, ImVec2(512, 512));
+            ImGui::Image((void*)(intptr_t)SliceDebuTex, ImVec2(512, 512), ImVec2(0, 1), ImVec2(1, 0));
         }
 
         for (size_t i = 0; i < m_Objects.size(); i++)
@@ -218,97 +255,103 @@ void Editor::AddNewObject(std::vector<Triangle>& in_triangles, std::string name)
 
 void Editor::DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset)
 {
-    //save our main viewport
-    GLint prevViewport[4];//remember opengl defines a viewport as x offset, y offset, w and h
+    GLint prevViewport[4];
     glGetIntegerv(GL_VIEWPORT, prevViewport);
-
-    //bind our debug viewport
     glBindFramebuffer(GL_FRAMEBUFFER, SliceDebugFBO);
-    //prepare to draw
     glViewport(0, 0, 512, 512);
-    glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //lets center it
-    float minX = FLT_MAX, minY = FLT_MAX;
-    float maxX = -FLT_MAX, maxY = -FLT_MAX;
+    //Uncured Resin (Backgground)
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    for (auto& contour : slice)
-    {
-        for (auto& p : contour)
-        {
-            minX = std::min(minX, p.x);
-            minY = std::min(minY, p.y);
-            maxX = std::max(maxX, p.x);
-            maxY = std::max(maxY, p.y);
-        }
-    }
-
-    float w = maxX - minX;
-    float h = maxY - minY;
-    float maxDim = std::max(w, h);
-
-    //santiy check
-    if (maxDim < 0.0001f)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
-        return;
-    }
-    float scale = 1.8f / maxDim;
-    glm::vec2 center(minX + w * 0.5f, minY + h * 0.5f);
-
-    //build and center the vertices from our slices
-    std::vector<glm::vec3> vertices;
-    vertices.reserve(slice.size() * 32);
-    for (const auto& contour : slice)
-    {
-        for (size_t i = 0; i < contour.size() - 1; ++i)
-        {
-            glm::vec2 a = (contour[i] - center) * scale;
-            glm::vec2 b = (contour[i + 1] - center) * scale;
-
-            vertices.push_back({ a.x, a.y, 0.0f });
-            vertices.push_back({ b.x, b.y, 0.0f });
-        }
-    }
-    //if nothing to draw early exit
-    if (vertices.empty())
+    //If no contours, nothing to do
+    if (slice.empty())
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
         return;
     }
 
-    //prepare to OpenGl draw
-    GLuint vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
+    //Cured Resin
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDisable(GL_DEPTH_TEST);
 
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_DYNAMIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
     glUseProgram(shader);
 
-    //set uniforms
-    glm::mat4 MVP = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
-    GLint locMVP = glGetUniformLocation(shader, "u_MVP");
-    glUniformMatrix4fv(locMVP, 1, GL_FALSE, &MVP[0][0]);
-    GLint locColor = glGetUniformLocation(shader, "u_Color");
-    glUniform4f(locColor, 0.1f, 0.6f, 1.0f, 0.9f);
+    //Orthographic projection
+    float bedWidth = (m_Config.m_bedWidth > 0.0f) ? m_Config.m_bedWidth : 220.0f;
+    float bedDepth = (m_Config.m_bedDepth > 0.0f) ? m_Config.m_bedDepth : 220.0f;
+    float halfW = bedWidth * 0.5f;
+    float halfD = bedDepth * 0.5f;
+    glm::mat4 projection = glm::ortho(-halfW, halfW, -halfD, halfD, -1.0f, 1.0f);
 
-    glLineWidth(1.0f);//careful, drivers dont like weird values here!
-    glDrawArrays(GL_LINES, 0, (GLsizei)vertices.size());
+    GLint locProj = glGetUniformLocation(shader, "projection");
+    if (locProj == -1)
+        locProj = glGetUniformLocation(shader, "u_MVP");
+    if (locProj != -1) 
+        glUniformMatrix4fv(locProj, 1, GL_FALSE, &projection[0][0]);
 
-    //recover previous viewport and draw
+    GLint locColor = glGetUniformLocation(shader, "uColor");
+    if (locColor == -1) 
+        locColor = glGetUniformLocation(shader, "u_Color");
+
+
+    //First Pass: cummulation
+    glEnable(GL_STENCIL_TEST);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDisable(GL_CULL_FACE);
+
+    //Always on the stencil
+    glStencilFunc(GL_ALWAYS, 0, 0xFF);
+
+    //we increase the value
+    glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+    glBindVertexArray(SliceContourVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, SliceContourVBO);
+
+    for (const auto& contour : slice)
+    {
+        if (contour.size() < 3) 
+            continue;
+        glBufferData(GL_ARRAY_BUFFER, contour.size() * sizeof(glm::vec2), contour.data(), GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, static_cast<GLsizei>(contour.size()));
+    }
+
+    //Fiill the quad
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    //Paint anything with stencil
+    glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    if (locColor != -1)
+    {
+        glUniform4f(locColor, 1.0f, 1.0f, 1.0f, 1.0f);
+    }
+
+    //Entire quad
+    glm::vec2 bedQuadVertices[6] = {
+        { -halfW, -halfD },
+        {  halfW, -halfD },
+        {  halfW,  halfD },
+
+        { -halfW, -halfD },
+        {  halfW,  halfD },
+        { -halfW,  halfD }
+    };
+
+    glBindVertexArray(BedQuadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, BedQuadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(bedQuadVertices), bedQuadVertices, GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    //Recover OpenGl state after all this
+    glDisable(GL_STENCIL_TEST);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
     glBindVertexArray(0);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
     glUseProgram(0);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);//recover previous viewport
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
 }
