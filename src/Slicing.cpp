@@ -40,34 +40,45 @@ std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, fl
 std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float y)
 {
     const glm::vec3 verts[3] = { tri.A, tri.B, tri.C };
-    if (fabs(tri.A.y - y) < 1e-6f && fabs(tri.B.y - y) < 1e-6f && fabs(tri.C.y - y) < 1e-6f)
+
+    //Vertex position on y plane
+    float d[3] = { verts[0].y - y, verts[1].y - y, verts[2].y - y };
+
+    //All on the same side
+    if ((d[0] > 1e-6f && d[1] > 1e-6f && d[2] > 1e-6f) ||
+        (d[0] < -1e-6f && d[1] < -1e-6f && d[2] < -1e-6f))
     {
         return std::nullopt;
     }
+
     std::vector<glm::vec2> points;
 
     for (int i = 0; i < 3; ++i)
     {
-        const glm::vec3& a = verts[i];
-        const glm::vec3& b = verts[(i + 1) % 3];
+        int j = (i + 1) % 3;
+        float da = d[i];
+        float db = d[j];
 
-        // Si la arista cruza el plano z
-        const float eps = 1e-6f;
-        float da = a.y - y;
-        float db = b.y - y;
-
-        if ((da > 0 && db < 0) || (da < 0 && db > 0))
+        //Edge crossing
+        if ((da >= 0.0f && db < 0.0f) || (da < 0.0f && db >= 0.0f))
         {
             float t = da / (da - db);
-            glm::vec3 p = a + t * (b - a);
-            points.push_back(glm::vec2(p.x, p.z));
+            glm::vec3 p = verts[i] + t * (verts[j] - verts[i]);
+
+            glm::vec2 pt2D(p.x, p.z);
+
+            //Avoid duplicated vertices
+            if (points.empty() || glm::distance(points.back(), pt2D) > 1e-5f)
+            {
+                points.push_back(pt2D);
+            }
         }
     }
 
     if (points.size() == 2)
         return Segment{ points[0], points[1] };
-    else
-        return std::nullopt;
+
+    return std::nullopt;
 }
 
 MeshSlice ConnectSegments(const std::vector<Segment>& segments, float tol)
