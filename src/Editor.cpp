@@ -21,9 +21,7 @@ Editor::~Editor()
 }
 void Editor::R_Init()
 {
-    // =========================================================================
-    // 1. SHADERS (SE CONSERVA TODO)
-    // =========================================================================
+    //Regular shaders---
     VtxShader = CreateProgram(GL_VERTEX_SHADER, MyVertShader);
     FragShader = CreateProgram(GL_FRAGMENT_SHADER, MyFragShader);
     MyShader = glCreateProgram();
@@ -31,7 +29,7 @@ void Editor::R_Init()
     glAttachShader(MyShader, FragShader);
     glLinkProgram(MyShader);
 
-    // Shader para renderizar los Slices 2D
+    //Slice shaders---
     SlicesVtxShader = CreateProgram(GL_VERTEX_SHADER, SliceVtxShader);
     SlicesFragShader = CreateProgram(GL_FRAGMENT_SHADER, SliceFragShader);
     SlicesShader = glCreateProgram();
@@ -39,14 +37,12 @@ void Editor::R_Init()
     glAttachShader(SlicesShader, SlicesFragShader);
     glLinkProgram(SlicesShader);
 
-    // =========================================================================
-    // 2. FRAMEBUFFER DE DEPURACIÓN DE SLICES (MODIFICADO / AMPLIADO)
-    // =========================================================================
+    //Frame buffer---
     glGenTextures(1, &SliceDebuTex);
     glBindTexture(GL_TEXTURE_2D, SliceDebuTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    // CAMBIO MENOR: Cambiar a GL_NEAREST para evitar bordes borrosos al crear la máscara de píxeles
+    //avoid interpolations here
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -54,7 +50,7 @@ void Editor::R_Init()
     glBindFramebuffer(GL_FRAMEBUFFER, SliceDebugFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SliceDebuTex, 0);
 
-    // [NUEVO]: Adjuntar el Renderbuffer de Stencil para que funcionen las pasadas Par-Impar
+    //stencil buffer to keep track of edes crossed
     glGenRenderbuffers(1, &SliceDebugRBO);
     glBindRenderbuffer(GL_RENDERBUFFER, SliceDebugRBO);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 512, 512);
@@ -66,10 +62,8 @@ void Editor::R_Init()
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // =========================================================================
-    // 3. GEOMETRÍA DEDICADA A SLICES (NUEVO)
-    // =========================================================================
-    // VAO/VBO para subir las líneas/polígonos de los contornos en tiempo real
+    //Slices---
+    //Contours data
     glGenVertexArrays(1, &SliceContourVAO);
     glGenBuffers(1, &SliceContourVBO);
     glBindVertexArray(SliceContourVAO);
@@ -77,19 +71,16 @@ void Editor::R_Init()
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
 
-    // VAO/VBO para el lienzo/rectángulo de la cama (BedQuad)
+    //Slice canvas data
     glGenVertexArrays(1, &BedQuadVAO);
     glGenBuffers(1, &BedQuadVBO);
     glBindVertexArray(BedQuadVAO);
     glBindBuffer(GL_ARRAY_BUFFER, BedQuadVBO);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
+    glBindVertexArray(0);
 
-    glBindVertexArray(0); // Desenlazar
-
-    // =========================================================================
-    // 4. ESTADO GLOBAL DE OPENGL PARA EL VISOR 3D (SE CONSERVA TODO)
-    // =========================================================================
+    //Return state---
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
@@ -182,20 +173,20 @@ void Editor::UpdateImGui()
             }
             if (m_Config.DebugSlices.empty())//not sliced yet
             {
-                m_Config.DebugSlices = GenerateMeshSlices(m_Objects[m_Config.m_SelectedObject].m_Model, m_Config.layerHeight);
+                m_Config.DebugSlices = GenerateMeshSlices(m_Objects[m_Config.m_SelectedObject].m_Model, m_Config.layerHeight, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix);
             }
-            if (ImGui::Button("-"))
+            else
             {
-                if (m_Config.m_CurrSlice > 0)
-                    m_Config.m_CurrSlice--;
+                int totalSlices = (int)m_Config.DebugSlices.size();
+                int currentLayer1Based = m_Config.m_CurrSlice + 1;
+
+                std::string formatStr = "Layer %d / " + std::to_string(totalSlices);
+
+                if (ImGui::SliderInt("Slice", &currentLayer1Based, 1, totalSlices, formatStr.c_str()))
+                {
+                    m_Config.m_CurrSlice = currentLayer1Based - 1;
+                }
             }
-            if (ImGui::Button("+")) 
-            { 
-                if (m_Config.m_CurrSlice < m_Config.DebugSlices.size() - 1)
-                    m_Config.m_CurrSlice++;
-            }
-            ImGui::SameLine();
-            ImGui::Text("Layer %d / %d", m_Config.m_CurrSlice + 1, (int)m_Config.DebugSlices.size());
 
             ImGui::Image((void*)(intptr_t)SliceDebuTex, ImVec2(512, 512), ImVec2(0, 1), ImVec2(1, 0));
         }

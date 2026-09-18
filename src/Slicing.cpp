@@ -6,13 +6,23 @@ GridKey ToGrid(const glm::vec2& p, float tol)
     return GridKey{ (int)std::floor(p.x / tol), (int)std::floor(p.y / tol) };
 };
 
-std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, float layerHeight)
+std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, float layerHeight, glm::mat4 trs)
 {
     std::vector<MeshSlice> slices;
+    std::vector<Triangle> transformed;
+    transformed.reserve(model.size());
     float yMin = +FLT_MAX;
     float yMax = -FLT_MAX;
 
     for (const auto& tri : model)
+    {
+        Triangle T;
+        T.A = glm::vec3(trs * glm::vec4(tri.A, 1.0f));
+        T.B = glm::vec3(trs * glm::vec4(tri.B, 1.0f));
+        T.C = glm::vec3(trs * glm::vec4(tri.C, 1.0f));
+        transformed.push_back(T);
+    }
+    for (const auto& tri : transformed)
     {
         yMin = std::min({ yMin, tri.A.y, tri.B.y, tri.C.y });
         yMax = std::max({ yMax, tri.A.y, tri.B.y, tri.C.y });
@@ -25,10 +35,11 @@ std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, fl
         float y = yMin + (i + 0.5f) * layerHeight;
         std::vector<Segment> layerSegments;
 
-        for (const auto& tri : model)
+        for (const auto& tri : transformed)
         {
             auto seg = IntersectTriangleWithPlane(tri, y);
-            if (seg) layerSegments.push_back(*seg);
+            if (seg) 
+                layerSegments.push_back(*seg);
         }
 
         MeshSlice layerContours = ConnectSegments(layerSegments);
