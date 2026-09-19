@@ -184,7 +184,6 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
     int segments = 12;
     float radius = SupportRadius;
 
-    //Get the initial direction (from the mesh point)
     glm::vec3 horizDir = glm::vec3(bodyTop.x - contactTop.x, 0.0f, bodyTop.z - contactTop.z);
     float offsetDist = glm::length(horizDir);
 
@@ -195,17 +194,15 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
         horizDir = glm::vec3(1, 0, 0);
     }
 
-    //Size of the support top
     float dropY = std::min(offsetDist * 1.8f, totalHeight * 0.45f);
     float actualOffset = std::min(offsetDist, dropY);
 
-    //Bezier control points (in case we want more curve on supports (trees))
     glm::vec3 P0 = contactTop;
     glm::vec3 P1 = contactTop + horizDir * actualOffset - glm::vec3(0, dropY * 0.6f, 0);
     glm::vec3 P2 = contactTop + horizDir * actualOffset - glm::vec3(0, dropY, 0);
     glm::vec3 PBot = glm::vec3(P2.x, bot.y, P2.z);
 
-    struct Node 
+    struct Node
     {
         glm::vec3 center;
         float radius;
@@ -214,7 +211,7 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
 
     std::vector<Node> nodes;
 
-    //sample curve
+    //Bazier sample
     int numCurveSamples = 6;
     for (int i = 0; i <= numCurveSamples; ++i)
     {
@@ -223,7 +220,9 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
 
         glm::vec3 pos = invT * invT * P0 + 2.0f * invT * t * P1 + t * t * P2;
         glm::vec3 tangent = 2.0f * invT * (P1 - P0) + 2.0f * t * (P2 - P1);
-        glm::vec3 dir = glm::normalize(tangent);
+
+        float tangLen = glm::length(tangent);
+        glm::vec3 dir = (tangLen > 1e-5f) ? (tangent / tangLen) : glm::vec3(0, -1, 0);
 
         float nodeRadius = radius;
         if (t < 0.3f) {
@@ -234,23 +233,21 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
         nodes.push_back({ pos, nodeRadius, dir });
     }
 
-    //final node (vertical)
-    glm::vec3 vertDir = glm::vec3(0, -1, 0);
-    nodes.push_back({ PBot, radius, vertDir });
+    //final node in the bed
+    nodes.push_back({ PBot, radius, glm::vec3(0, -1, 0) });
 
-
-    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C) 
+    auto addTri = [&](glm::vec3 A, glm::vec3 B, glm::vec3 C)
     {
-        outSupports.push_back(A);
-        outSupports.push_back(B);
-        outSupports.push_back(C);
+            outSupports.push_back(A);
+            outSupports.push_back(B);
+            outSupports.push_back(C);
     };
 
-    std::vector<std::vector<glm::vec3>> rings;//rings of connection
+    std::vector<std::vector<glm::vec3>> rings;
 
-    //First reference frame
+    //initial reference frame
     glm::vec3 prevDir = nodes[0].dir;
-    glm::vec3 initialUp = fabs(prevDir.y) > 0.99f ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+    glm::vec3 initialUp = (std::abs(prevDir.y) > 0.99f) ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
     glm::vec3 right = glm::normalize(glm::cross(prevDir, initialUp));
     glm::vec3 forward = glm::normalize(glm::cross(prevDir, right));
 
@@ -260,7 +257,6 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
 
         if (n > 0)
         {
-            //rotate right and forward to follow the curve
             glm::vec3 curDir = node.dir;
             glm::vec3 axis = glm::cross(prevDir, curDir);
             float angle = glm::length(axis);
@@ -269,7 +265,7 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
             {
                 axis = glm::normalize(axis);
                 float dotVal = glm::clamp(glm::dot(prevDir, curDir), -1.0f, 1.0f);
-                float rotAngle = acos(dotVal);
+                float rotAngle = std::acos(dotVal);
 
                 glm::mat4 rot = glm::rotate(glm::mat4(1.0f), rotAngle, axis);
                 right = glm::normalize(glm::vec3(rot * glm::vec4(right, 0.0f)));
@@ -278,18 +274,17 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
             prevDir = curDir;
         }
 
-        //create the ring
         std::vector<glm::vec3> ring;
         for (int i = 0; i < segments; ++i)
         {
             float angle = (i / (float)segments) * 2.0f * glm::pi<float>();
-            glm::vec3 offset = (cos(angle) * right + sin(angle) * forward) * node.radius;
+            glm::vec3 offset = (std::cos(angle) * right + std::sin(angle) * forward) * node.radius;
             ring.push_back(node.center + offset);
         }
         rings.push_back(ring);
     }
 
-    //connect the rings
+    //connect the rings in the column
     for (size_t r = 0; r < rings.size() - 1; ++r)
     {
         const auto& ringA = rings[r];
@@ -307,6 +302,22 @@ void CreateSupportPillar(const glm::vec3& contactTop, const glm::vec3& bodyTop, 
             addTri(t0, b0, t1);
             addTri(t1, b0, b1);
         }
+    }
+
+    //close tip
+    const auto& topRing = rings.front();
+    for (int i = 0; i < segments; ++i)
+    {
+        int next = (i + 1) % segments;
+        addTri(contactTop, topRing[next], topRing[i]);
+    }
+
+    //close the bottom
+    const auto& botRing = rings.back();
+    for (int i = 0; i < segments; ++i)
+    {
+        int next = (i + 1) % segments;
+        addTri(PBot, botRing[i], botRing[next]);
     }
 }
 

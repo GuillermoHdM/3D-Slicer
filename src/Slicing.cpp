@@ -32,11 +32,15 @@ std::vector<MeshSlice> GenerateMeshSlices(const std::vector<Triangle>& model, fl
 
     for (int i = 0; i < numLayers; ++i)
     {
-        float y = yMin + (i + 0.5f) * layerHeight;
+        float y = yMin + (i + 0.5f) * layerHeight + 1e-5f;
         std::vector<Segment> layerSegments;
 
         for (const auto& tri : transformed)
         {
+            float triYMin = std::min({ tri.A.y, tri.B.y, tri.C.y });
+            float triYMax = std::max({ tri.A.y, tri.B.y, tri.C.y });
+            if (y < triYMin || y > triYMax)
+                continue;
             auto seg = IntersectTriangleWithPlane(tri, y);
             if (seg) 
                 layerSegments.push_back(*seg);
@@ -95,10 +99,11 @@ std::optional<Segment> IntersectTriangleWithPlane(const Triangle& tri, float y)
 MeshSlice ConnectSegments(const std::vector<Segment>& segments, float tol)
 {
     MeshSlice contours;
+    if (segments.empty()) return contours;
 
     EndpointMap map;
 
-    //Give index to endpoints
+    //Index final points on mesh
     for (int i = 0; i < (int)segments.size(); ++i)
     {
         map[ToGrid(segments[i].A, tol)].push_back(i);
@@ -107,60 +112,65 @@ MeshSlice ConnectSegments(const std::vector<Segment>& segments, float tol)
 
     std::vector<bool> used(segments.size(), false);
 
-    //build the contours
     for (int i = 0; i < (int)segments.size(); ++i)
     {
-        if (used[i]) continue;
+        if (used[i])
+            continue;
 
         std::vector<glm::vec2> contour;
-
         glm::vec2 start = segments[i].A;
         glm::vec2 current = segments[i].B;
 
         contour.push_back(start);
         contour.push_back(current);
-
         used[i] = true;
 
         bool closed = false;
 
         while (!closed)
         {
-            GridKey key = ToGrid(current, tol);
-
-            auto it = map.find(key);
-            if (it == map.end()) break;
-
+            GridKey centerKey = ToGrid(current, tol);
             bool extended = false;
 
-            for (int segIdx : it->second)
+            //search the 9 neightbour tiles
+            //This avoids the contour to break if the point falls on the edge of the mesh
+            for (int dx = -1; dx <= 1 && !extended; ++dx)
             {
-                if (used[segIdx]) continue;
-
-                const auto& s = segments[segIdx];
-
-                if (glm::length(s.A - current) < tol)
+                for (int dy = -1; dy <= 1 && !extended; ++dy)
                 {
-                    current = s.B;
-                }
-                else if (glm::length(s.B - current) < tol)
-                {
-                    current = s.A;
-                }
-                else
-                {
-                    continue;
-                }
+                    GridKey neighborKey = { centerKey.x + dx, centerKey.z + dy };
+                    auto it = map.find(neighborKey);
+                    if (it == map.end()) continue;
 
-                contour.push_back(current);
-                used[segIdx] = true;
-                extended = true;
-                break;
+                    for (int segIdx : it->second)
+                    {
+                        if (used[segIdx]) continue;
+
+                        const auto& s = segments[segIdx];
+
+                        if (glm::length(s.A - current) < tol)
+                        {
+                            current = s.B;
+                        }
+                        else if (glm::length(s.B - current) < tol)
+                        {
+                            current = s.A;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                        contour.push_back(current);
+                        used[segIdx] = true;
+                        extended = true;
+                        break;
+                    }
+                }
             }
-
-            if (!extended)
+            if (!extended) 
                 break;
 
+            //Close the loop
             if (glm::length(contour.front() - current) < tol)
             {
                 contour.back() = contour.front();
@@ -169,7 +179,14 @@ MeshSlice ConnectSegments(const std::vector<Segment>& segments, float tol)
         }
 
         if (contour.size() > 2)
+        {
+            //if last is same as first avoid generating degenerate cases
+            if (contour.front() == contour.back())
+            {
+                contour.pop_back();
+            }
             contours.push_back(contour);
+        }
     }
 
     return contours;

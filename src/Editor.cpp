@@ -178,13 +178,27 @@ void Editor::UpdateImGui()
             else
             {
                 int totalSlices = (int)m_Config.DebugSlices.size();
-                int currentLayer1Based = m_Config.m_CurrSlice + 1;
-
-                std::string formatStr = "Layer %d / " + std::to_string(totalSlices);
-
-                if (ImGui::SliderInt("Slice", &currentLayer1Based, 1, totalSlices, formatStr.c_str()))
+                if (totalSlices > 0)
                 {
-                    m_Config.m_CurrSlice = currentLayer1Based - 1;
+                    if (ImGui::Button("<<")) 
+                    { 
+                        m_Config.m_CurrSlice -= 1; 
+                    }
+                    ImGui::SameLine();
+                    m_Config.m_CurrSlice = std::clamp(m_Config.m_CurrSlice, 0, totalSlices - 1);
+                    int currentLayer1Based = m_Config.m_CurrSlice + 1;
+                    std::string formatStr = "Layer %d / " + std::to_string(totalSlices);
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.0f);
+                    if (ImGui::SliderInt("##SliceSlider", &currentLayer1Based, 1, totalSlices, formatStr.c_str()))
+                    {
+                        m_Config.m_CurrSlice = currentLayer1Based - 1;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button(">>")) 
+                    {
+                        m_Config.m_CurrSlice += 1; 
+                    }
+                    m_Config.m_CurrSlice = std::clamp(m_Config.m_CurrSlice, 0, totalSlices - 1);
                 }
             }
 
@@ -300,12 +314,36 @@ void Editor::DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset
     glBindVertexArray(SliceContourVAO);
     glBindBuffer(GL_ARRAY_BUFFER, SliceContourVBO);
 
+    //Render of the first pass (use P0 as center of triangle fan)
     for (const auto& contour : slice)
     {
-        if (contour.size() < 3) 
+        if (contour.size() < 3)
             continue;
-        glBufferData(GL_ARRAY_BUFFER, contour.size() * sizeof(glm::vec2), contour.data(), GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, static_cast<GLsizei>(contour.size()));
+        std::vector<glm::vec2> fanTriangles;
+
+        //N vertices divided in N-2 triangles with V[0] as center
+        fanTriangles.reserve((contour.size() - 2) * 3);
+        glm::vec2 pivot = contour[0];
+
+        for (size_t i = 1; i < contour.size() - 1; ++i)
+        {
+            glm::vec2 p1 = contour[i];
+            glm::vec2 p2 = contour[i + 1];
+
+            //Skip triangles way too close
+            if (glm::distance2(p1, p2) < 1e-8f)
+                continue;
+
+            fanTriangles.push_back(pivot);
+            fanTriangles.push_back(p1);
+            fanTriangles.push_back(p2);
+        }
+
+        if (fanTriangles.empty()) 
+            continue;
+
+        glBufferData(GL_ARRAY_BUFFER, fanTriangles.size() * sizeof(glm::vec2), fanTriangles.data(), GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(fanTriangles.size()));
     }
 
     //Fiill the quad
