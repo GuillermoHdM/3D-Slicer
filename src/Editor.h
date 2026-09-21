@@ -21,6 +21,11 @@ class Editor
 	void R_Init();
 	void R_Update();
 	void DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset);
+	void RenderPrintBed();
+	GLuint BedPlaneVAO;
+	GLuint BedPlaneVBO;
+	GLuint BedOutlineVAO;
+	GLuint BedOutlineVBO;
 	GLuint MyShader;
 	GLuint VtxShader;
 	GLuint FragShader;

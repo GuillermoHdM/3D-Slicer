@@ -35,13 +35,13 @@ const char* MyFragShader = R"(
 	{
 		vec3 norm = normalize(Normal);
 		vec3 c = color.rgb;
-		float diff = max(dot(norm, lightDir), 0.0);
+		
+		float diff = (length(norm) > 0.1) ? max(dot(norm, lightDir), 0.0) : 0.8;
 
-		vec3 ambient = 0.2 * c;
+		vec3 ambient = 0.3 * c;
 		vec3 diffuse = diff * c;
 		vec3 result = ambient + diffuse;
-
-	    FragColor = vec4(result, 1.0);
+		FragColor = vec4(result, color.a);
 	}
     )";
 

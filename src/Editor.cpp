@@ -80,6 +80,23 @@ void Editor::R_Init()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)0);
     glBindVertexArray(0);
 
+    //Bed outline
+    glGenVertexArrays(1, &BedPlaneVAO);
+    glGenBuffers(1, &BedPlaneVBO);
+    glBindVertexArray(BedPlaneVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, BedPlaneVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    //
+    glGenVertexArrays(1, &BedOutlineVAO);
+    glGenBuffers(1, &BedOutlineVBO);
+    glBindVertexArray(BedOutlineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, BedOutlineVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+
+    glBindVertexArray(0);
+
     //Return state---
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -134,6 +151,7 @@ bool Editor::Update()
 
     R_Update();
     m_Grid.Draw(m_Camera.m_View, m_Camera.m_Projection);
+    RenderPrintBed();
 	UpdateImGui();//get the display of imgui updated
 
     ivec2 windowSize = W.size();
@@ -383,4 +401,87 @@ void Editor::DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+}
+
+
+void Editor::RenderPrintBed()
+{
+    float width = (m_Config.m_bedWidth > 0.0f) ? m_Config.m_bedWidth : 220.0f;
+    float depth = (m_Config.m_bedDepth > 0.0f) ? m_Config.m_bedDepth : 220.0f;
+    float halfW = width * 0.5f;
+    float halfD = depth * 0.5f;
+    float planeY = -0.01f;//avoid zfighting with grid
+
+    struct Vertex {
+        glm::vec3 pos;
+        glm::vec3 normal;
+    };
+
+    Vertex planeVertices[6] = {
+        { { -halfW, planeY, -halfD }, { 0.0f, 1.0f, 0.0f } },
+        { {  halfW, planeY, -halfD }, { 0.0f, 1.0f, 0.0f } },
+        { {  halfW, planeY,  halfD }, { 0.0f, 1.0f, 0.0f } },
+
+        { { -halfW, planeY, -halfD }, { 0.0f, 1.0f, 0.0f } },
+        { {  halfW, planeY,  halfD }, { 0.0f, 1.0f, 0.0f } },
+        { { -halfW, planeY,  halfD }, { 0.0f, 1.0f, 0.0f } }
+    };
+    Vertex outlineVertices[4] = {
+        { { -halfW, 0.0f, -halfD }, { 0.0f, 1.0f, 0.0f } },
+        { {  halfW, 0.0f, -halfD }, { 0.0f, 1.0f, 0.0f } },
+        { {  halfW, 0.0f,  halfD }, { 0.0f, 1.0f, 0.0f } },
+        { { -halfW, 0.0f,  halfD }, { 0.0f, 1.0f, 0.0f } }
+    };
+    glUseProgram(MyShader);
+
+    GLint locModel = glGetUniformLocation(MyShader, "model");
+    GLint locView = glGetUniformLocation(MyShader, "view");
+    GLint locProj = glGetUniformLocation(MyShader, "projection");
+    GLint locColor = glGetUniformLocation(MyShader, "color");
+
+    glm::mat4 identityModel = glm::mat4(1.0f);
+    if (locModel != -1) 
+        glUniformMatrix4fv(locModel, 1, GL_FALSE, &identityModel[0][0]);
+    if (locView != -1) 
+        glUniformMatrix4fv(locView, 1, GL_FALSE, &m_Camera.m_View[0][0]);
+    if (locProj != -1) 
+        glUniformMatrix4fv(locProj, 1, GL_FALSE, &m_Camera.m_Projection[0][0]);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
+
+    glBindVertexArray(BedPlaneVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, BedPlaneVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_DYNAMIC_DRAW);
+
+    if (locColor != -1) 
+        glUniform4f(locColor, 0.25f, 0.35f, 0.45f, 0.35f);//Color blueish
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glBindVertexArray(BedOutlineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, BedOutlineVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(outlineVertices), outlineVertices, GL_DYNAMIC_DRAW);
+
+    if (locColor != -1) 
+        glUniform4f(locColor, 0.9f, 0.9f, 0.9f, 0.8f);//Color whiteish
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
+
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glUseProgram(0);
 }
