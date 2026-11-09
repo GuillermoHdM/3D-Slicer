@@ -1,4 +1,4 @@
-##3D Printing Slicer
+# 3D Printing Slicer
 **Personal Software Development Project**
 **1. Project Overview**
 This project is a custom 3D printing slicer developed in C++ using OpenGL. The application
