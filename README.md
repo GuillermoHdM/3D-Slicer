@@ -1,6 +1,7 @@
 # 3D Printing Slicer
 **Personal Software Development Project**
 **1. Project Overview**
+
 This project is a custom 3D printing slicer developed in C++ using OpenGL. The application
 provides a complete workflow for preparing 3D models for resin 3D printing, from model
 import and positioning to automatic support generation, layer slicing and final file export.
@@ -10,16 +11,23 @@ and interactive visualization.
 The application is built using CMake and integrates several libraries:
 
 ● C++: Main programming language.
+
 ● OpenGL: 3D rendering and visualization.
+
 ● GLFW: Window and input management.
+
 ● GLM: Mathematical operations and 3D transformations.
+
 ● Dear ImGui: Application interface and user interaction.
+
 ● CMake: Build system and project configuration.
+
 
 ![Screenshots](docs/SC_SlicerDefault.png)
 
 
 **2. Model Import and Scene Management**
+
 The application supports importing 3D models in STL format, handling both binary and ASCII
 representations.
 It allows you to see the objects in the scene as both regular solids or wireframes to see
@@ -38,10 +46,15 @@ system.
 The algorithm analyses the geometry of the model to identify areas that require structural
 support during the printing process. Based on this analysis, it generates support structures
 while attempting to balance several requirements:
+
 ● Avoiding insufficient support in critical regions.
+
 ● Preventing unnecessary support generation.
+
 ● Detecting and avoiding collisions or unwanted intersections with the model.
+
 ● Maintaining structural stability throughout the printing process.
+
 This functionality involves working directly with 3D geometry and implementing algorithms to
 evaluate candidate support positions and their spatial relationships with the model.
 The objective is to produce support structures that provide adequate stability while
@@ -50,6 +63,7 @@ minimizing unnecessary material and avoiding geometric conflicts.
 ![Screenshots](docs/SC_SlicerSupports.png)
 
 **4. Model Slicing and Layer Preview**
+
 After model preparation and support generation, the application processes the geometry to
 generate the individual printing layers.
 The slicing stage converts the 3D scene into a sequence of 2D layer representations. Each
@@ -74,22 +88,30 @@ completing the workflow from importing a 3D model to generating the final printa
 ● Official Documentation: https://github.com/elegooofficial/GOO/blob/main/Goo%20Format%20Spec%20V1.2.pdf
 
 **6. Technical Challenges and Development Focus**
+
 Developing this application has involved working with several areas of software engineering
 and computer graphics:
+
 ● 3D Geometry Processing: Importing and manipulating mesh data, analysing model
 surfaces and processing geometric information.
+
 ● Collision Detection: Evaluating spatial relationships between generated support
 structures and the original model to avoid unwanted intersections.
+
 ● Algorithm Development: Designing and refining automatic support generation and
 slicing algorithms.
+
 ● 3D Transformations: Managing model positioning, rotation and scaling using
 mathematical transformations.
+
 ● Graphics Programming: Building an interactive 3D visualization system using
 OpenGL.
+
 ● Software Architecture: Organizing a multi-component C++ application and
 managing its build configuration through CMake.
 
 **7. Project Summary**
+
 This project has been an opportunity to apply my academic background in Computer
 Science to a substantial independent software development challenge.
 Rather than relying on existing slicing libraries or building a simple interface around an
