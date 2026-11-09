@@ -16,7 +16,7 @@ The application is built using CMake and integrates several libraries:
 ● Dear ImGui: Application interface and user interaction.
 ● CMake: Build system and project configuration.
 
-![Screenshots](SC_SlicerDefault.png)
+![Screenshots](docs/SC_SlicerDefault.png)
 
 
 **2. Model Import and Scene Management**
@@ -30,7 +30,7 @@ and position each model relative to the virtual printing plate.
 The scene provides a visual representation of the printing area, helping the user prepare the
 model before starting the support generation and slicing stages.
 
-![Screenshots](SC_SlicerTransforms.png)
+![Screenshots](docs/SC_SlicerTransforms.png)
 
 **3. Automatic Support Generation**
 One of the main technical components of the project is the automatic support generation
@@ -47,7 +47,7 @@ evaluate candidate support positions and their spatial relationships with the mo
 The objective is to produce support structures that provide adequate stability while
 minimizing unnecessary material and avoiding geometric conflicts.
 
-![Screenshots](SC_SlicerSupports.png)
+![Screenshots](docs/SC_SlicerSupports.png)
 
 **4. Model Slicing and Layer Preview**
 After model preparation and support generation, the application processes the geometry to
@@ -58,11 +58,11 @@ geometry and verify the slicing output before exporting the final file.
 This stage connects the 3D geometry processing pipeline with the data required by the
 target printing format.
 
-![Screenshots](SC_SlicerLayers1.png)
+![Screenshots](docs/SC_SlicerLayers1.png)
 
-![Screenshots](SC_SlicerLayers1.png)
+![Screenshots](docs/SC_SlicerLayers1.png)
 
-![Screenshots](SC_SlicerLayers1.png)
+![Screenshots](docs/SC_SlicerLayers1.png)
 
 **5. Export and File Generation**
 The final stage of the workflow is exporting the generated slices into the .goo file format.
