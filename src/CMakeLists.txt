@@ -17,13 +17,13 @@ add_library(
     "FileLoader.cpp" "FileLoader.h" 
     "Object.h" "Object.cpp" 
     "Slicing.cpp" "Slicing.h" 
-    "Support.cpp" "Support.h"  "Export.cpp" "Export.h")
+    "Support.cpp" "Support.h"  "Export.cpp" "Export.h" "OutputFormatting.h" "OutputFormatting.cpp")
 
 add_executable(Slicer
     main.cpp
     Editor.cpp
     Editor.h
- "Export.cpp" "Export.h")
+ "Export.cpp" "Export.h" "OutputFormatting.h" "OutputFormatting.cpp")
 target_link_libraries(Slicer PUBLIC ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
