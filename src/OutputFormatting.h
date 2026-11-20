@@ -22,4 +22,3 @@ struct RLEgoo
 private:
 	std::vector<uint8_t> Data;
 };
-

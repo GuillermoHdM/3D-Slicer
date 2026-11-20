@@ -193,6 +193,8 @@ struct layer_content
 };
 
 
+void ExportGoo(const char* filename);
+
 // Check binary structure sizes
 static_assert(sizeof(header_info) == 195477);
 static_assert(sizeof(layer_definition) == 66);

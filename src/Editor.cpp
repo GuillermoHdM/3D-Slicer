@@ -3,6 +3,7 @@
 #include "OpenGl.hpp"
 #include "FileLoader.h"
 #include "Support.h"
+#include "Export.h"
 #include <random>
 #include <iostream>
 Editor::Editor() : W(ivec2(1920 * 0.75f, 1080 * 0.75f), true)
@@ -166,7 +167,18 @@ void Editor::UpdateImGui()
     if (ImGui::Begin("Editor"))
     {
         ImGui::Checkbox("Wireframe", &m_Config.m_Wireframe);
-        ImGui::Checkbox("Show Slices", &m_Config.m_SliceDebug);
+        ImGui::Checkbox("Slice", &m_Config.m_SliceDebug);
+        if (m_Config.DebugSlices.empty() == false)
+        {
+            ImGui::InputText("##FileName", m_Config.OutFileName, EditorConsts::MAX_FILE_NAME_SIZE);
+            ImGui::SameLine();
+            ImGui::Text(".goo");
+        
+            if (ImGui::Button("Export"))
+            {
+                ExportGoo(m_Config.OutFileName);
+            }
+        }
         if (m_Config.m_SliceDebug && m_Objects.size() != 0)
         {
             ImGui::Text("Select Object:");

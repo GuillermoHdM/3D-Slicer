@@ -10,6 +10,10 @@
 #include <utility>
 #include <string>
 
+namespace EditorConsts
+{
+	constexpr size_t MAX_FILE_NAME_SIZE = 128;
+};
 
 class Editor
 {
@@ -67,6 +71,9 @@ public:
 		float m_bedWidth = 220.0f;
 		float m_bedDepth = 220.0f;
 		std::vector<MeshSlice> DebugSlices;
+
+		char OutFileName[128] = "";
+
 	} m_Config;
 };
 
