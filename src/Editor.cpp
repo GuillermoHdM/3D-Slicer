@@ -170,13 +170,14 @@ void Editor::UpdateImGui()
         ImGui::Checkbox("Slice", &m_Config.m_SliceDebug);
         if (m_Config.DebugSlices.empty() == false)
         {
+
             ImGui::InputText("##FileName", m_Config.OutFileName, EditorConsts::MAX_FILE_NAME_SIZE);
             ImGui::SameLine();
             ImGui::Text(".goo");
         
             if (ImGui::Button("Export"))
             {
-                ExportGoo(m_Config.OutFileName);
+                ExportGoo(m_Config.OutFileName, LayerImages);
             }
         }
         if (m_Config.m_SliceDebug && m_Objects.size() != 0)
@@ -201,9 +202,17 @@ void Editor::UpdateImGui()
                     m_Config.DebugSlices.clear();
                 }
             }
-            if (m_Config.DebugSlices.empty())//not sliced yet
+            if (m_Config.DebugSlices.empty()) // not sliced yet
             {
-                m_Config.DebugSlices = GenerateMeshSlices(m_Objects[m_Config.m_SelectedObject].m_Model, m_Config.layerHeight, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix);
+                m_Config.DebugSlices = GenerateMeshSlices(m_Objects[m_Config.m_SelectedObject].m_Model,m_Config.layerHeight, m_Objects[m_Config.m_SelectedObject].m_Transform.modelMatrix);
+
+                LayerImages.clear();
+                for (const auto& slice : m_Config.DebugSlices)
+                {
+                    DrawSliceDebug(slice, SlicesShader, 0.0f);
+                    StoreSliceImage();
+                }
+                m_Config.m_CurrSlice = 0;
             }
             else
             {
@@ -496,4 +505,23 @@ void Editor::RenderPrintBed()
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glUseProgram(0);
+}
+
+
+void Editor::StoreSliceImage()
+{
+    std::vector<uint8_t> pixels(512 * 512);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, SliceDebugFBO);
+
+    glReadPixels(
+        0, 0, 512, 512,
+        GL_RED,
+        GL_UNSIGNED_BYTE,
+        pixels.data()
+    );
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+    LayerImages.push_back(std::move(pixels));
 }

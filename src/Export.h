@@ -193,7 +193,7 @@ struct layer_content
 };
 
 
-void ExportGoo(const char* filename);
+void ExportGoo(const char* filename, const std::vector<std::vector<uint8_t>>& LayerImages);
 
 // Check binary structure sizes
 static_assert(sizeof(header_info) == 195477);

@@ -26,6 +26,7 @@ class Editor
 	void R_Update();
 	void DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset);
 	void RenderPrintBed();
+	void StoreSliceImage();
 	GLuint BedPlaneVAO;
 	GLuint BedPlaneVBO;
 	GLuint BedOutlineVAO;
@@ -49,6 +50,7 @@ class Editor
 	//^^^^^^^^^^^^^^^^^
 	Grid m_Grid;
 	std::vector<Object> m_Objects;
+	std::vector<std::vector<uint8_t>> LayerImages;
 
 
 public:
@@ -71,7 +73,6 @@ public:
 		float m_bedWidth = 220.0f;
 		float m_bedDepth = 220.0f;
 		std::vector<MeshSlice> DebugSlices;
-
 		char OutFileName[128] = "";
 
 	} m_Config;
