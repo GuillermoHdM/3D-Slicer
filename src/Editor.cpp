@@ -42,6 +42,8 @@ void Editor::R_Init()
     glGenTextures(1, &SliceDebuTex);
     glBindTexture(GL_TEXTURE_2D, SliceDebuTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);//texture swizzling so that we see it white
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);//
 
     //avoid interpolations here
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -135,10 +137,6 @@ void Editor::R_Update()
         glUniformMatrix4fv(locModel, 1, GL_FALSE, &model[0][0]);
         obj.Draw(m_Config.m_Wireframe, MyShader);
     }
-    if (m_Config.m_SliceDebug)
-    {                                                                          //  m_Config.m_CurrSlice      1.0f (layer heignt)
-        DrawSliceDebug(m_Config.DebugSlices[m_Config.m_CurrSlice], SlicesShader, m_Config.m_CurrSlice * m_Config.layerHeight);
-    }
     glUseProgram(0);
 }
 
@@ -189,6 +187,8 @@ void Editor::UpdateImGui()
                 {
                     m_Config.m_SelectedObject--;
                     m_Config.DebugSlices.clear();
+                    LayerImages.clear();
+                    m_Config.m_CurrSlice = 0;
                 }
             }
             ImGui::SameLine();
@@ -200,6 +200,8 @@ void Editor::UpdateImGui()
                 {
                     m_Config.m_SelectedObject++;
                     m_Config.DebugSlices.clear();
+                    LayerImages.clear();
+                    m_Config.m_CurrSlice = 0;
                 }
             }
             if (m_Config.DebugSlices.empty()) // not sliced yet
@@ -213,31 +215,40 @@ void Editor::UpdateImGui()
                     StoreSliceImage();
                 }
                 m_Config.m_CurrSlice = 0;
+                UpdateSlicePreview(m_Config.m_CurrSlice);
             }
             else
             {
-                int totalSlices = (int)m_Config.DebugSlices.size();
+                int totalSlices = static_cast<int>(m_Config.DebugSlices.size());
+
                 if (totalSlices > 0)
                 {
-                    if (ImGui::Button("<<")) 
-                    { 
-                        m_Config.m_CurrSlice -= 1; 
+                    bool sliceChanged = false;
+                    if (ImGui::Button("<<"))
+                    {
+                        m_Config.m_CurrSlice--;
+                        sliceChanged = true;
                     }
                     ImGui::SameLine();
-                    m_Config.m_CurrSlice = std::clamp(m_Config.m_CurrSlice, 0, totalSlices - 1);
                     int currentLayer1Based = m_Config.m_CurrSlice + 1;
                     std::string formatStr = "Layer %d / " + std::to_string(totalSlices);
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 70.0f);
                     if (ImGui::SliderInt("##SliceSlider", &currentLayer1Based, 1, totalSlices, formatStr.c_str()))
                     {
                         m_Config.m_CurrSlice = currentLayer1Based - 1;
+                        sliceChanged = true;
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button(">>")) 
+                    if (ImGui::Button(">>"))
                     {
-                        m_Config.m_CurrSlice += 1; 
+                        m_Config.m_CurrSlice++;
+                        sliceChanged = true;
                     }
                     m_Config.m_CurrSlice = std::clamp(m_Config.m_CurrSlice, 0, totalSlices - 1);
+                    if (sliceChanged)
+                    {
+                        UpdateSlicePreview(m_Config.m_CurrSlice);
+                    }
                 }
             }
 
@@ -411,7 +422,6 @@ void Editor::DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset
     glBindBuffer(GL_ARRAY_BUFFER, BedQuadVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(bedQuadVertices), bedQuadVertices, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
 
     //Recover OpenGl state after all this
     glDisable(GL_STENCIL_TEST);
@@ -524,4 +534,24 @@ void Editor::StoreSliceImage()
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
     LayerImages.push_back(std::move(pixels));
+}
+
+void Editor::UpdateSlicePreview(size_t layerIndex)
+{
+    if (layerIndex >= LayerImages.size())
+        return;
+
+    glBindTexture(GL_TEXTURE_2D, SliceDebuTex);
+
+    glTexSubImage2D(
+        GL_TEXTURE_2D,
+        0,
+        0, 0,
+        512, 512,
+        GL_RED,
+        GL_UNSIGNED_BYTE,
+        LayerImages[layerIndex].data()
+    );
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 }

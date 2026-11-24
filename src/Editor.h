@@ -27,6 +27,7 @@ class Editor
 	void DrawSliceDebug(const MeshSlice& slice, GLuint shader, float zOffset);
 	void RenderPrintBed();
 	void StoreSliceImage();
+	void UpdateSlicePreview(size_t layerIndex);
 	GLuint BedPlaneVAO;
 	GLuint BedPlaneVBO;
 	GLuint BedOutlineVAO;
